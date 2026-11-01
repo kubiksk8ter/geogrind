@@ -21,6 +21,8 @@ Fixed product constraints (do not ask about them, design for them):
   account; paid plans are not.
 - The whole UI is available in **Czech and English**; the user chooses the language. Every
   user-visible text exists in both languages.
+- Only the **latest version** of Chrome, Firefox, Safari and Edge is supported. Target modern
+  browsers only: no polyfills or transpilation for older versions.
 
 Fixed technology stack (do not replace it, build on it):
 

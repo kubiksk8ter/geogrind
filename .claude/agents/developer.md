@@ -19,6 +19,8 @@ Fixed product constraints (do not ask about them, build for them):
 - All external services must be **free of charge** (free tiers are fine, paid plans are not).
 - The whole UI is available in **Czech and English**. Every user-visible text exists in both
   languages and goes through the i18n library; never hard-code UI strings.
+- Only the **latest version** of Chrome, Firefox, Safari and Edge is supported. Use modern web
+  APIs freely; do not add polyfills or workarounds for older browsers.
 
 Fixed technology stack: **TypeScript** (strict), **Next.js**, **Vitest** and the i18n library
 recorded in `docs/architecture.md`.
