@@ -1,1 +1,6 @@
-{}
+{
+  "map": {
+    "label": "Mapa České republiky",
+    "loadError": "Mapu se nepodařilo načíst. Zkuste stránku načíst znovu."
+  }
+}

@@ -7,17 +7,22 @@ Type commands like "Zoom to Prague" or "Show cycling routes" and the map reacts.
 
 Early development. Current features:
 
-- Intro screen showing the product name "GeoGrind"
+- Full-screen map of the Czech Republic (MapLibre GL JS, OpenFreeMap vector tiles) with pan,
+  zoom and zoom buttons
+- Localised message when the map cannot be loaded
 - Czech (`/cs`) and English (`/en`) versions; `/` redirects by browser language (fallback Czech)
 
-The map and the natural-language input are not implemented yet.
+The natural-language input is not implemented yet.
 
-Tech stack: TypeScript (strict), Next.js (App Router), next-intl, Vitest, Biome.
+Tech stack: TypeScript (strict), Next.js (App Router), next-intl, MapLibre GL JS, Tailwind CSS, Vitest,
+Biome.
 
 ## Requirements and setup
 
 - Node.js 26 (see `.nvmrc`)
-- No environment variables and no external services are needed yet.
+- No environment variables and no API keys are needed. The map loads its style and tiles from
+  the free public [OpenFreeMap](https://openfreemap.org/) service, so an internet connection
+  and a WebGL2-capable browser are required.
 
 ```bash
 npm install
@@ -33,7 +38,8 @@ npm start          # run the production build
 
 ```
 src/app/         routes, layouts, global styles ([locale] segment)
-src/components/  presentational React components
+src/components/  React components (map view, failure message)
+src/map/         map engine interface, MapLibre implementation, map config
 src/config/      app-wide constants
 src/i18n/        routing, request config, typed messages
 src/proxy.ts     locale redirect (next-intl)

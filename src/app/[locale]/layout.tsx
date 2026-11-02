@@ -16,8 +16,8 @@ export default async function LocaleLayout({
   const locale = await getLocale();
 
   return (
-    <html lang={locale}>
-      <body>
+    <html lang={locale} className="overflow-hidden">
+      <body className="overflow-hidden bg-neutral-200 font-sans text-neutral-900">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>

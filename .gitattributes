@@ -1,2 +1,2 @@
-# Store text files with LF in the repository, check them out with CRLF
-* text=auto eol=crlf
+# Use LF line endings everywhere, regardless of the local core.autocrlf setting
+* text=auto eol=lf

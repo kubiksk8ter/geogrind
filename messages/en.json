@@ -1,1 +1,6 @@
-{}
+{
+  "map": {
+    "label": "Map of the Czech Republic",
+    "loadError": "The map could not be loaded. Please try reloading the page."
+  }
+}
