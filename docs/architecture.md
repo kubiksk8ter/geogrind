@@ -64,5 +64,9 @@ behind interfaces that tests can replace; secrets stay in server-side code.
 - `NEXT_LOCALE` cookie is written with the Cookie Store API (`localeCookie` returns a
   `CookieInit`), because Biome forbids `document.cookie` –
   [design 003](design/003-user-input-and-language-switch.md)
+- Motion is plain CSS transitions (Tailwind classes, `motion-reduce:transition-none` via the
+  shared `TRANSITION_CLASS_NAME`), no animation library; applied to the input focus border and
+  the language switch selection only –
+  [design 004](design/004-motion-transitions.md)
 - Tailwind CSS added at the user's request (supersedes "no Tailwind" in design 001); shared
   class sets live in `src/components/sharedConstants.ts`

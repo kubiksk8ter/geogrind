@@ -3,7 +3,10 @@
 import { Input } from "@base-ui/react/input";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { FOCUS_RING_CLASS_NAME } from "../sharedConstants";
+import {
+  FOCUS_RING_CLASS_NAME,
+  TRANSITION_CLASS_NAME,
+} from "../sharedConstants";
 import { PLACEHOLDER_KEYS } from "./placeholderConstants";
 import { usePlaceholderRotation } from "./usePlaceholderRotation";
 
@@ -26,7 +29,7 @@ export function CommandInput() {
         value={value}
         onValueChange={setValue}
         autoComplete="off"
-        className={`h-11 w-full rounded-md border border-neutral-500 bg-white px-4 text-base text-neutral-900 shadow-md placeholder:text-neutral-600 ${FOCUS_RING_CLASS_NAME}`}
+        className={`h-11 w-full rounded-md border border-neutral-500 bg-white px-4 text-base text-neutral-900 shadow-md outline-3 outline-solid outline-transparent forced-colors:not-focus-visible:outline-0 transition-[border-color,outline-color] duration-300 focus-visible:duration-700 placeholder:text-neutral-600 focus-visible:border-blue-600 ${FOCUS_RING_CLASS_NAME} ${TRANSITION_CLASS_NAME}`}
       />
     </div>
   );

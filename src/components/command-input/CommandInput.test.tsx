@@ -54,6 +54,12 @@ describe("CommandInput", () => {
     expect(screen.getByRole("textbox", { name })).toBeDefined();
   });
 
+  it("FR-3: the focus transition is disabled for reduced motion", () => {
+    const input = renderInput("cs");
+
+    expect(input.className).toContain("motion-reduce:transition-none");
+  });
+
   it.each([
     ["cs", ["Přibliž na Prahu", "Zobraz cyklostezky", "Ukaž Brno"]],
     ["en", ["Zoom to Prague", "Show cycling routes", "Show Brno"]],

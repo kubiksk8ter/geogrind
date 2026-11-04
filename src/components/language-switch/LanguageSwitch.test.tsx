@@ -66,6 +66,14 @@ describe("LanguageSwitch", () => {
     ).toBe("false");
   });
 
+  it("FR-3: the selected-state transition is disabled for reduced motion", () => {
+    renderSwitch("cs");
+
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio.className).toContain("motion-reduce:transition-none");
+    }
+  });
+
   it("AC-6: clicking the other language switches texts and address", () => {
     renderSwitch("cs");
 

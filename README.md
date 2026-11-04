@@ -15,6 +15,8 @@ Early development. Current features:
   without reloading the map
 - Command input at the bottom edge of the map with rotating example hints (UI only, typed text is
   not processed yet)
+- Short colour transitions on the input focus border and the CZ/EN selection;
+  disabled with the system "reduced motion" setting
 
 Tech stack: TypeScript (strict), Next.js (App Router), next-intl, MapLibre GL JS, Tailwind CSS,
 Base UI, Vitest, Biome.
