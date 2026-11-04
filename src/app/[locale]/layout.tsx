@@ -1,6 +1,6 @@
-import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import type { ReactNode } from "react";
+import { LocaleProvider } from "@/i18n/LocaleProvider";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -18,7 +18,7 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} className="overflow-hidden">
       <body className="overflow-hidden bg-neutral-200 font-sans text-neutral-900">
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
       </body>
     </html>
   );

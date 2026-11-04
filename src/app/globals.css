@@ -1,2 +1,9 @@
 @import "tailwindcss";
 @import "maplibre-gl/dist/maplibre-gl.css";
+
+/* Keeps the expanded top-left attribution clear of the zoom buttons and the language switch
+   in the top-right corner (control width 29px + 10px margin on each side). */
+.maplibregl-ctrl-top-left .maplibregl-ctrl-attrib {
+  box-sizing: border-box;
+  max-width: calc(100dvw - 4.5rem);
+}

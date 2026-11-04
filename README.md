@@ -8,14 +8,16 @@ Type commands like "Zoom to Prague" or "Show cycling routes" and the map reacts.
 Early development. Current features:
 
 - Full-screen map of the Czech Republic (MapLibre GL JS, OpenFreeMap vector tiles) with pan,
-  zoom and zoom buttons
+  zoom and zoom buttons; the collapsible attribution sits in the top-left corner
 - Localised message when the map cannot be loaded
 - Czech (`/cs`) and English (`/en`) versions; `/` redirects by browser language (fallback Czech)
+- CZ/EN language switch below the zoom buttons (same button size); switching changes all texts and the address
+  without reloading the map
+- Command input at the bottom edge of the map with rotating example hints (UI only, typed text is
+  not processed yet)
 
-The natural-language input is not implemented yet.
-
-Tech stack: TypeScript (strict), Next.js (App Router), next-intl, MapLibre GL JS, Tailwind CSS, Vitest,
-Biome.
+Tech stack: TypeScript (strict), Next.js (App Router), next-intl, MapLibre GL JS, Tailwind CSS,
+Base UI, Vitest, Biome.
 
 ## Requirements and setup
 
@@ -38,10 +40,10 @@ npm start          # run the production build
 
 ```
 src/app/         routes, layouts, global styles ([locale] segment)
-src/components/  React components (map view, failure message)
+src/components/  React components, one folder per feature (map, language-switch, command-input)
 src/map/         map engine interface, MapLibre implementation, map config
 src/config/      app-wide constants
-src/i18n/        routing, request config, typed messages
+src/i18n/        routing, request config, typed messages, client locale provider
 src/proxy.ts     locale redirect (next-intl)
 messages/        cs.json, en.json
 docs/            specs, designs, architecture

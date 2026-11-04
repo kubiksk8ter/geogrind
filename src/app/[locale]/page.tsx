@@ -1,4 +1,4 @@
-import { MapLoader } from "@/components/MapLoader";
+import { MapLoader } from "@/components/map/MapLoader";
 import { APP_NAME } from "@/config";
 import { generatePageMetadata } from "./metadata";
 

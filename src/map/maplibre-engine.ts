@@ -1,4 +1,6 @@
 import {
+  AttributionControl,
+  type IControl,
   Map as MapLibreMap,
   NavigationControl,
   setWorkerUrl,
@@ -18,6 +20,24 @@ const FIT_PADDING_PX = 8;
 // placeholder hides them instead of logging a warning for each one.
 const EMPTY_IMAGE = { width: 1, height: 1, data: new Uint8Array(4) };
 
+// An empty slot in MapLibre's control stack; MapLibre lays controls of a corner out vertically,
+// so whatever is rendered into it sits below the controls added before.
+class SlotControl implements IControl {
+  readonly element = document.createElement("div");
+
+  constructor() {
+    this.element.className = "maplibregl-ctrl";
+  }
+
+  onAdd() {
+    return this.element;
+  }
+
+  onRemove() {
+    this.element.remove();
+  }
+}
+
 export const createMapEngine: CreateMapEngine = ({ container, onFailure }) => {
   let map: MapLibreMap;
   try {
@@ -25,11 +45,12 @@ export const createMapEngine: CreateMapEngine = ({ container, onFailure }) => {
       container,
       style: MAP_CONFIG.styleUrl,
       bounds: MAP_CONFIG.czechBounds,
+      attributionControl: false,
       fitBoundsOptions: { padding: FIT_PADDING_PX },
     });
   } catch {
     onFailure("webgl");
-    return { destroy() {} };
+    return { controlsSlot: document.createElement("div"), destroy() {} };
   }
 
   let settled = false;
@@ -50,7 +71,11 @@ export const createMapEngine: CreateMapEngine = ({ container, onFailure }) => {
     MAP_CONFIG.loadTimeoutMs,
   );
 
+  const slotControl = new SlotControl();
   map.addControl(new NavigationControl({ showCompass: false }));
+  map.addControl(slotControl);
+  // Top-left keeps the collapsible attribution clear of the bottom input and the right-hand controls.
+  map.addControl(new AttributionControl(), "top-left");
   map.setMissingStyleImageResolver((id) => {
     if (!map.hasImage(id)) map.addImage(id, EMPTY_IMAGE);
   });
@@ -64,6 +89,7 @@ export const createMapEngine: CreateMapEngine = ({ container, onFailure }) => {
   });
 
   const engine: MapEngine = {
+    controlsSlot: slotControl.element,
     destroy() {
       settle();
       map.remove();
