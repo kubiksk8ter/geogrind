@@ -5,6 +5,7 @@ type Handler = () => void;
 const mocks = vi.hoisted(() => ({
   handlers: {} as Record<string, Handler>,
   remove: vi.fn(),
+  addControl: vi.fn(),
   construct: vi.fn(),
   addImage: vi.fn(),
   resolveMissingImage: undefined as ((id: string) => void) | undefined,
@@ -15,7 +16,7 @@ vi.mock("maplibre-gl", () => ({
     constructor(options: unknown) {
       mocks.construct(options);
     }
-    addControl = vi.fn();
+    addControl = mocks.addControl;
     on(event: string, handler: Handler) {
       mocks.handlers[event] = handler;
     }
@@ -26,7 +27,8 @@ vi.mock("maplibre-gl", () => ({
       mocks.resolveMissingImage = resolver;
     }
   },
-  NavigationControl: class {},
+  NavigationControl: class NavigationControl {},
+  AttributionControl: class AttributionControl {},
   setWorkerUrl: vi.fn(),
 }));
 
@@ -40,6 +42,7 @@ beforeEach(() => {
   mocks.handlers = {};
   mocks.construct.mockReset();
   mocks.remove.mockReset();
+  mocks.addControl.mockReset();
   mocks.addImage.mockReset();
   mocks.resolveMissingImage = undefined;
 });
@@ -56,6 +59,29 @@ describe("createMapEngine", () => {
         bounds: MAP_CONFIG.czechBounds,
       }),
     );
+  });
+
+  it("FR-6: adds the controls slot after the zoom control", () => {
+    const engine = createMapEngine({ container, onFailure: vi.fn() });
+
+    const [zoom, slot] = mocks.addControl.mock.calls.map(
+      ([control]) => control,
+    );
+    expect(zoom.constructor.name).toBe("NavigationControl");
+    expect(slot.onAdd()).toBe(engine.controlsSlot);
+    expect(engine.controlsSlot.className).toContain("maplibregl-ctrl");
+  });
+
+  it("FR-15: shows the collapsible attribution in the top-left corner only", () => {
+    createMapEngine({ container, onFailure: vi.fn() });
+
+    expect(mocks.construct).toHaveBeenCalledWith(
+      expect.objectContaining({ attributionControl: false }),
+    );
+    const attribution = mocks.addControl.mock.calls.find(
+      ([control]) => control.constructor.name === "AttributionControl",
+    );
+    expect(attribution?.[1]).toBe("top-left");
   });
 
   it("reports webgl failure when the map constructor throws", () => {

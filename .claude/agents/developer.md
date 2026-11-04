@@ -68,9 +68,17 @@ After each task run the project checks via the `package.json` scripts: type chec
 and, at the end, a production build. Fix every failure before moving on. Never skip, disable or
 weaken a check or a test to make it pass.
 
-### 5. Update the docs
+### 5. Update the docs and the version
 
 Update `README.md` (see *README*). Do not modify specs or designs.
+
+Bump the application version, once per spec you implement; you are the only agent who does it,
+and specs do not mention it. Increase the patch number of `version` in `package.json` and in
+the root entries of `package-lock.json` (e.g. `0.1.1` → `0.1.2`), for example with
+`npm version <next> --no-git-tag-version`; never touch dependency versions. After a release of
+`develop` to `main` the maintainer sets the version on `develop` to `1.1.0` and you continue
+from there (`1.1.1`, `1.1.2`, ...). Do not bump when you only return a *Blocking issues*
+response. Mention the new version in the summary.
 
 Then return a short summary: what was implemented (task IDs), files created or changed,
 decisions you made on your own, acceptance criteria that need a manual check and any

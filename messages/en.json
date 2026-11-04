@@ -2,5 +2,18 @@
   "map": {
     "label": "Map of the Czech Republic",
     "loadError": "The map could not be loaded. Please try reloading the page."
+  },
+  "language": {
+    "group": "Language",
+    "cs": "Czech",
+    "en": "English"
+  },
+  "input": {
+    "label": "Map command",
+    "placeholders": {
+      "zoomToPrague": "Zoom to Prague",
+      "showCyclingRoutes": "Show cycling routes",
+      "showBrno": "Show Brno"
+    }
   }
 }

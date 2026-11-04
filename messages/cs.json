@@ -2,5 +2,18 @@
   "map": {
     "label": "Mapa České republiky",
     "loadError": "Mapu se nepodařilo načíst. Zkuste stránku načíst znovu."
+  },
+  "language": {
+    "group": "Jazyk",
+    "cs": "Čeština",
+    "en": "Angličtina"
+  },
+  "input": {
+    "label": "Příkaz pro mapu",
+    "placeholders": {
+      "zoomToPrague": "Přibliž na Prahu",
+      "showCyclingRoutes": "Zobraz cyklostezky",
+      "showBrno": "Ukaž Brno"
+    }
   }
 }
