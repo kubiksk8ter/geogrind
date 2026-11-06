@@ -18,6 +18,11 @@ Early development. Current features:
 - Short colour transitions on the input focus border and the CZ/EN selection;
   disabled with the system "reduced motion" setting
 
+Not implemented yet: map layers (OpenTopoMap base map, Waymarked Trails hiking and cycling
+overlays) with a tile switcher and a local tile cache. Spec
+([005](docs/specs/005-map-layers.md)) and design ([005](docs/design/005-map-layers.md)) exist but
+are on hold, mainly because of the licence and usage terms of the tile services.
+
 Tech stack: TypeScript (strict), Next.js (App Router), next-intl, MapLibre GL JS, Tailwind CSS,
 Base UI, Vitest, Biome.
 
