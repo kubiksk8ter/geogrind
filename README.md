@@ -97,3 +97,7 @@ The project uses Claude Code subagents (`.claude/agents/`) for its workflow:
   `docs/architecture.md` up to date
 - **developer** – implements designs (or small specs) with tests and keeps this README up to
   date
+
+## License
+
+Released under the [MIT License](LICENSE).
