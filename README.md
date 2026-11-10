@@ -1,32 +1,60 @@
 # GeoGrind
 
-A Next.js map application for the Czech Republic controlled by natural language.
-Type commands like "Zoom to Prague" or "Show cycling routes" and the map reacts.
+A Next.js map application controlled by natural language.
+Type a zoom command like "Zoom to Prague" or "Přibliž na Brno" and the map moves there.
 
 ## Status
 
 Early development. Current features:
 
-- Full-screen map of the Czech Republic (MapLibre GL JS, OpenFreeMap vector tiles) with pan,
+- Full-screen world map that opens on the Czech Republic (MapLibre GL JS, OpenFreeMap vector tiles) with pan,
   zoom and zoom buttons; the collapsible attribution sits in the top-left corner
 - Localised message when the map cannot be loaded
 - Czech (`/cs`) and English (`/en`) versions; `/` redirects by browser language (fallback Czech)
 - CZ/EN language switch below the zoom buttons (same button size); switching changes all texts and the address
   without reloading the map
-- Command input at the bottom edge of the map with rotating example hints (UI only, typed text is
-  not processed yet)
+- Command input at the bottom edge of the map with rotating example hints. Zoom commands work:
+  Czech or English text is interpreted by AI (Groq) and the place is looked up with a geocoder
+  (Nominatim), anywhere in the world. Other commands get a "not supported" message.
+- Server-side protection of the free services: input validation, a 10 s pause after each processed
+  command (also an unsuccessful one), 10 commands per minute per IP address and a daily cap on AI calls; messages are shown in
+  the current language and switch with it
 - Short colour transitions on the input focus border and the CZ/EN selection;
   disabled with the system "reduced motion" setting
 
-Tech stack: TypeScript (strict), Next.js (App Router), next-intl, MapLibre GL JS, Tailwind CSS,
-Base UI, Vitest, Biome.
+Tech stack: TypeScript (strict), Next.js (App Router, with a Route Handler as the server part),
+next-intl, MapLibre GL JS, Tailwind CSS, Base UI, Valibot, Groq (AI), Nominatim (geocoding),
+Vitest, Biome.
 
 ## Requirements and setup
 
 - Node.js 26 (see `.nvmrc`)
-- No environment variables and no API keys are needed. The map loads its style and tiles from
-  the free public [OpenFreeMap](https://openfreemap.org/) service, so an internet connection
-  and a WebGL2-capable browser are required.
+- A free [Groq](https://console.groq.com/keys) API key (no payment method needed) for the zoom
+  commands. The map itself loads its style and tiles from the free public
+  [OpenFreeMap](https://openfreemap.org/) service, so an internet connection and a
+  WebGL2-capable browser are required.
+
+Configuration is read from environment variables on the server. Copy `.env.example` to
+`.env.local` (git-ignored) and fill it in; never commit real values.
+
+- `GROQ_API_KEY` – Groq API key, required. Stays on the server.
+- `GROQ_MODEL` – optional Groq model, default `openai/gpt-oss-20b`.
+- `GEOCODER_URL` – optional Nominatim-compatible geocoder, default the public OSM instance.
+- `GEOCODER_CONTACT` – e-mail or URL for the geocoder User-Agent; required in production.
+- `CLIENT_IP_HEADER` – header with the real client IP that your reverse proxy always overwrites
+  (e.g. `x-real-ip`); required in production, see below.
+- `APP_ORIGIN` – allowed `Origin` values, comma separated; default `http://localhost:3000`,
+  required in production.
+- `STATE_DIR` – optional folder for the limits state, default `.data/` (git-ignored).
+- `DAILY_CAP` – optional daily cap of AI calls for all users, default 500.
+
+`GROQ_API_KEY` is required everywhere, in development and in production, and is read only on
+the server. For local development it is the only variable you have to set; `GEOCODER_CONTACT`,
+`CLIENT_IP_HEADER` and `APP_ORIGIN` are additionally required in production.
+
+In production the app must run as one instance with a writable disk (the limits are kept in a
+file in `STATE_DIR`) behind a reverse proxy that sets `CLIENT_IP_HEADER`; without that the
+per-IP limits cannot be trusted.
 
 ```bash
 npm install
@@ -42,8 +70,11 @@ npm start          # run the production build
 
 ```
 src/app/         routes, layouts, global styles ([locale] segment)
+src/app/api/     Route Handler of the command endpoint (wiring only)
 src/components/  React components, one folder per feature (map, language-switch, command-input)
 src/map/         map engine interface, MapLibre implementation, map config
+src/server/      server-only code: command pipeline, AI client, geocoder, limits state, env config
+src/shared/      contracts shared by browser and server (action list, schemas, text rules)
 src/config/      app-wide constants
 src/i18n/        routing, request config, typed messages, client locale provider
 src/proxy.ts     locale redirect (next-intl)

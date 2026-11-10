@@ -1,0 +1,260 @@
+import { describe, expect, it, vi } from "vitest";
+import { FakeClock } from "../state/fakeClock";
+import { NominatimGeocoder } from "./nominatimGeocoder";
+import { GeocoderError } from "./types";
+
+const signal = new AbortController().signal;
+
+const BRNO = {
+  category: "boundary",
+  boundingbox: ["49.1096", "49.2946", "16.4283", "16.7283"],
+};
+
+function setup(
+  respond: (url: string) => Response | Promise<Response> = () =>
+    Response.json([BRNO]),
+) {
+  const clock = new FakeClock();
+  const slept: number[] = [];
+  const fetchStub = vi.fn<typeof fetch>(async (input) =>
+    respond(String(input)),
+  );
+  const geocoder = new NominatimGeocoder({
+    baseUrl: "https://geo.example",
+    contact: "ops@example.test",
+    clock,
+    sleep: async (milliseconds) => {
+      slept.push(milliseconds);
+      clock.advance(milliseconds);
+    },
+    fetch: fetchStub,
+  });
+  return { geocoder, fetchStub, slept, clock };
+}
+
+describe("NominatimGeocoder request", () => {
+  it("AC-28: sends only the place name", async () => {
+    const { geocoder, fetchStub } = setup();
+
+    await geocoder.find("Plzeň", signal);
+
+    const [url, init] = fetchStub.mock.calls[0] ?? [];
+    const parsed = new URL(String(url));
+    expect(`${parsed.origin}${parsed.pathname}`).toBe(
+      "https://geo.example/search",
+    );
+    expect(Object.fromEntries(parsed.searchParams)).toEqual({
+      q: "Plzeň",
+      limit: "5",
+      format: "jsonv2",
+      polygon_geojson: "1",
+      polygon_threshold: "0.1",
+      addressdetails: "0",
+    });
+    expect(init?.signal).toBe(signal);
+  });
+
+  it("AC-14: identifies the application with a User-Agent that has the contact", async () => {
+    const { geocoder, fetchStub } = setup();
+
+    await geocoder.find("Brno", signal);
+
+    const headers = new Headers(fetchStub.mock.calls[0]?.[1]?.headers);
+    expect(headers.get("user-agent")).toBe("GeoGrind (ops@example.test)");
+    expect([...headers.keys()]).toEqual(["user-agent"]);
+  });
+});
+
+describe("NominatimGeocoder result", () => {
+  it("AC-1: converts south/north/west/east strings to bounds", async () => {
+    const { geocoder } = setup();
+
+    expect(await geocoder.find("Brno", signal)).toEqual({
+      bounds: [
+        [16.4283, 49.1096],
+        [16.7283, 49.2946],
+      ],
+    });
+  });
+
+  it("AC-1: a place made of several areas is shown by the area that holds its centre (Tokyo, not its islands)", async () => {
+    const island = [
+      [150, 20],
+      [154, 20],
+      [154, 28],
+      [150, 28],
+      [150, 20],
+    ];
+    const mainland = [
+      [138.9, 35.5],
+      [139.9, 35.5],
+      [139.9, 35.9],
+      [138.9, 35.9],
+      [138.9, 35.5],
+    ];
+    const tokyo = {
+      category: "boundary",
+      lat: "35.7",
+      lon: "139.4",
+      boundingbox: ["20", "35.9", "138.9", "154"],
+      geojson: { type: "MultiPolygon", coordinates: [[island], [mainland]] },
+    };
+    const { geocoder } = setup(() => Response.json([tokyo]));
+
+    expect(await geocoder.find("Tokyo", signal)).toEqual({
+      bounds: [
+        [138.9, 35.5],
+        [139.9, 35.9],
+      ],
+    });
+  });
+
+  it("falls back to the plain box when the outline is missing or odd", async () => {
+    const odd = {
+      ...BRNO,
+      geojson: { type: "MultiPolygon", coordinates: "x" },
+    };
+    const { geocoder } = setup(() => Response.json([odd]));
+
+    expect(await geocoder.find("Brno", signal)).toEqual({
+      bounds: [
+        [16.4283, 49.1096],
+        [16.7283, 49.2946],
+      ],
+    });
+  });
+
+  it("AC-16: ignores non-place matches such as hotels, so a foreign name is not found", async () => {
+    const hotel = { category: "tourism", boundingbox: BRNO.boundingbox };
+    const { geocoder } = setup(() => Response.json([hotel, hotel]));
+
+    expect(await geocoder.find("Vienna", signal)).toBeNull();
+  });
+
+  it("AC-1: skips a non-place first match and uses the first real place", async () => {
+    const board = {
+      category: "information",
+      boundingbox: ["1", "2", "3", "4"],
+    };
+    const { geocoder } = setup(() => Response.json([board, BRNO]));
+
+    expect(await geocoder.find("Sumava", signal)).toEqual({
+      bounds: [
+        [16.4283, 49.1096],
+        [16.7283, 49.2946],
+      ],
+    });
+  });
+
+  it("AC-16: returns null when nothing was found", async () => {
+    const { geocoder } = setup(() => Response.json([]));
+
+    expect(await geocoder.find("Neexistující Lhota", signal)).toBeNull();
+  });
+
+  it("gives a point-like result a minimum extent", async () => {
+    const { geocoder } = setup(() =>
+      Response.json([
+        { category: "place", boundingbox: ["49.2", "49.2", "16.6", "16.6"] },
+      ]),
+    );
+
+    const found = await geocoder.find("Lhota", signal);
+
+    const [[west, south], [east, north]] = found?.bounds ?? [
+      [0, 0],
+      [0, 0],
+    ];
+    expect(east - west).toBeCloseTo(0.01);
+    expect(north - south).toBeCloseTo(0.01);
+    expect((west + east) / 2).toBeCloseTo(16.6);
+  });
+
+  it.each([
+    ["an error status", () => new Response("rate limited", { status: 429 })],
+    ["a server error", () => new Response("down", { status: 503 })],
+    ["a non-array body", () => Response.json({ error: "x" })],
+    [
+      "a malformed box",
+      () => Response.json([{ boundingbox: ["a", "b", "c", "d"] }]),
+    ],
+    ["a short box", () => Response.json([{ boundingbox: ["1", "2"] }])],
+    ["a non-JSON body", () => new Response("<html>")],
+  ])("AC-17: throws for %s", async (_name, respond) => {
+    const { geocoder } = setup(respond);
+
+    await expect(geocoder.find("Brno", signal)).rejects.toThrow();
+  });
+
+  it("does not leak the response body into the error", async () => {
+    const { geocoder } = setup(
+      () => new Response("secret-body", { status: 500 }),
+    );
+
+    const error = await geocoder.find("Brno", signal).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(GeocoderError);
+    expect(String(error)).not.toContain("secret-body");
+  });
+});
+
+describe("NominatimGeocoder politeness", () => {
+  it("serialises requests at least one second apart", async () => {
+    const { geocoder, slept } = setup();
+
+    await Promise.all([
+      geocoder.find("Brno", signal),
+      geocoder.find("Plzeň", signal),
+      geocoder.find("Ostrava", signal),
+    ]);
+
+    expect(slept).toEqual([1000, 1000]);
+  });
+
+  it("does not wait when enough time has passed", async () => {
+    const { geocoder, slept, clock } = setup();
+
+    await geocoder.find("Brno", signal);
+    clock.advance(1500);
+    await geocoder.find("Plzeň", signal);
+
+    expect(slept).toEqual([]);
+  });
+
+  it("caches answers, also case-insensitively, and found-nothing results", async () => {
+    const { geocoder, fetchStub } = setup((url) =>
+      Response.json(url.includes("Nikde") ? [] : [BRNO]),
+    );
+
+    await geocoder.find("Brno", signal);
+    await geocoder.find("brno", signal);
+    await geocoder.find("Nikde", signal);
+    await geocoder.find("Nikde", signal);
+
+    expect(fetchStub).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not cache failures", async () => {
+    let fail = true;
+    const { geocoder, fetchStub } = setup(() =>
+      fail ? new Response("", { status: 503 }) : Response.json([BRNO]),
+    );
+
+    await expect(geocoder.find("Brno", signal)).rejects.toThrow();
+    fail = false;
+    await geocoder.find("Brno", signal);
+
+    expect(fetchStub).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops waiting for its turn when the request is aborted", async () => {
+    const { geocoder, fetchStub } = setup();
+    const controller = new AbortController();
+    controller.abort(new Error("budget"));
+
+    await expect(geocoder.find("Brno", controller.signal)).rejects.toThrow(
+      "budget",
+    );
+    expect(fetchStub).not.toHaveBeenCalled();
+  });
+});

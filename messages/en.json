@@ -1,6 +1,6 @@
 {
   "map": {
-    "label": "Map of the Czech Republic",
+    "label": "Map",
     "loadError": "The map could not be loaded. Please try reloading the page."
   },
   "language": {
@@ -12,8 +12,26 @@
     "label": "Map command",
     "placeholders": {
       "zoomToPrague": "Zoom to Prague",
-      "showCyclingRoutes": "Show cycling routes",
-      "showBrno": "Show Brno"
+      "showHighTatras": "Show the High Tatras",
+      "showFirstAvenue": "Show 1st Avenue in New York",
+      "france": "France",
+      "moscow": "Moscow",
+      "zoomToTokyo": "Zoom to Tokyo",
+      "showGrandCanyon": "Show the Grand Canyon",
+      "mountEverest": "Mount Everest"
     }
+  },
+  "command": {
+    "loading": "Processing the command…",
+    "invalidRequest": "This command cannot be sent. Please check its text.",
+    "unsupported": "Only zooming to a place on the map is supported, for example “Zoom to Brno”.",
+    "notFound": "This place could not be found.",
+    "tooManyRequests": "Too many commands. Please try again in {seconds, plural, one {# second} other {# seconds}}.",
+    "aiResting": "The AI is resting right now. Please try again later.",
+    "aiRestingUntil": "The AI is resting right now. Please try again after {time}.",
+    "error": "The command could not be processed. Please try again later.",
+    "countdown": "{seconds} s",
+    "pausedStart": "The map has moved. Input is paused for {seconds, plural, one {# second} other {# seconds}}.",
+    "resumed": "You can enter the next command."
   }
 }

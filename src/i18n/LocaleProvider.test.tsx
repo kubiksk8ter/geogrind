@@ -46,15 +46,11 @@ describe("LocaleProvider", () => {
     const replaceState = vi.spyOn(window.history, "replaceState");
     const pushState = vi.spyOn(window.history, "pushState");
     renderProbe("cs");
-    expect(screen.getByTestId("label").textContent).toBe(
-      "Mapa České republiky",
-    );
+    expect(screen.getByTestId("label").textContent).toBe("Mapa");
 
     act(() => screen.getByRole("button", { name: "en" }).click());
 
-    expect(screen.getByTestId("label").textContent).toBe(
-      "Map of the Czech Republic",
-    );
+    expect(screen.getByTestId("label").textContent).toBe("Map");
     expect(window.location.pathname + window.location.search).toBe("/en?x=1");
     expect(window.location.hash).toBe("#top");
     expect(document.documentElement.lang).toBe("en");

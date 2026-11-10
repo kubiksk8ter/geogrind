@@ -4,4 +4,5 @@ export type {
   MapEngine,
   MapEngineOptions,
   MapFailureReason,
+  MapTarget,
 } from "./types";

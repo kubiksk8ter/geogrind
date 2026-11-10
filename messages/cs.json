@@ -1,6 +1,6 @@
 {
   "map": {
-    "label": "Mapa České republiky",
+    "label": "Mapa",
     "loadError": "Mapu se nepodařilo načíst. Zkuste stránku načíst znovu."
   },
   "language": {
@@ -12,8 +12,26 @@
     "label": "Příkaz pro mapu",
     "placeholders": {
       "zoomToPrague": "Přibliž na Prahu",
-      "showCyclingRoutes": "Zobraz cyklostezky",
-      "showBrno": "Ukaž Brno"
+      "showHighTatras": "Zobraz Vysoké Tatry",
+      "showFirstAvenue": "Ukaž 1st Avenue v New Yorku",
+      "france": "Francie",
+      "moscow": "Moskva",
+      "zoomToTokyo": "Přibliž na Tokio",
+      "showGrandCanyon": "Ukaž Grand Canyon",
+      "mountEverest": "Mount Everest"
     }
+  },
+  "command": {
+    "loading": "Zpracovávám příkaz…",
+    "invalidRequest": "Tento příkaz nelze odeslat. Zkontrolujte jeho text.",
+    "unsupported": "Podporuji jen přiblížení na místo na mapě, například „Přibliž na Brno“.",
+    "notFound": "Toto místo se nepodařilo najít.",
+    "tooManyRequests": "Příliš mnoho příkazů. Zkuste to znovu za {seconds, plural, one {# sekundu} few {# sekundy} many {# sekundy} other {# sekund}}.",
+    "aiResting": "Umělá inteligence teď odpočívá. Zkuste to později.",
+    "aiRestingUntil": "Umělá inteligence teď odpočívá. Zkuste to znovu po {time}.",
+    "error": "Příkaz se nepodařilo zpracovat. Zkuste to prosím později.",
+    "countdown": "{seconds} s",
+    "pausedStart": "Mapa se přesunula. Zadávání je pozastaveno na {seconds, plural, one {# sekundu} few {# sekundy} many {# sekundy} other {# sekund}}.",
+    "resumed": "Můžete zadat další příkaz."
   }
 }

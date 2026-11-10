@@ -15,6 +15,8 @@ setWorkerUrl(
 );
 
 const FIT_PADDING_PX = 8;
+// Keeps a target clear of the command input (bottom) and the map controls (right).
+const TARGET_PADDING_PX = { top: 32, right: 56, bottom: 88, left: 32 };
 
 // The provider's style references a few icons its sprite does not contain; a transparent
 // placeholder hides them instead of logging a warning for each one.
@@ -50,7 +52,11 @@ export const createMapEngine: CreateMapEngine = ({ container, onFailure }) => {
     });
   } catch {
     onFailure("webgl");
-    return { controlsSlot: document.createElement("div"), destroy() {} };
+    return {
+      controlsSlot: document.createElement("div"),
+      moveTo() {},
+      destroy() {},
+    };
   }
 
   let settled = false;
@@ -90,6 +96,13 @@ export const createMapEngine: CreateMapEngine = ({ container, onFailure }) => {
 
   const engine: MapEngine = {
     controlsSlot: slotControl.element,
+    moveTo({ bounds }, motion) {
+      map.fitBounds(bounds, {
+        padding: TARGET_PADDING_PX,
+        maxZoom: MAP_CONFIG.targetMaxZoom,
+        animate: motion === "animate",
+      });
+    },
     destroy() {
       settle();
       map.remove();
