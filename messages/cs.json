@@ -18,7 +18,8 @@
       "moscow": "Moskva",
       "zoomToTokyo": "Přibliž na Tokio",
       "showGrandCanyon": "Ukaž Grand Canyon",
-      "mountEverest": "Mount Everest"
+      "mountEverest": "Mount Everest",
+      "zoomToColosseum": "Přibliž na Koloseum"
     }
   },
   "command": {

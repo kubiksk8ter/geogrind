@@ -10,6 +10,18 @@ const BRNO = {
   boundingbox: ["49.1096", "49.2946", "16.4283", "16.7283"],
 };
 
+const HOTEL = {
+  category: "tourism",
+  type: "hotel",
+  boundingbox: ["48.8", "48.9", "2.2", "2.4"],
+};
+
+const TOWER = {
+  category: "tourism",
+  type: "attraction",
+  boundingbox: ["48.85", "48.87", "2.28", "2.31"],
+};
+
 function setup(
   respond: (url: string) => Response | Promise<Response> = () =>
     Response.json([BRNO]),
@@ -45,7 +57,7 @@ describe("NominatimGeocoder request", () => {
     );
     expect(Object.fromEntries(parsed.searchParams)).toEqual({
       q: "Plzeň",
-      limit: "5",
+      limit: "10",
       format: "jsonv2",
       polygon_geojson: "1",
       polygon_threshold: "0.1",
@@ -124,11 +136,83 @@ describe("NominatimGeocoder result", () => {
     });
   });
 
-  it("AC-16: ignores non-place matches such as hotels, so a foreign name is not found", async () => {
-    const hotel = { category: "tourism", boundingbox: BRNO.boundingbox };
-    const { geocoder } = setup(() => Response.json([hotel, hotel]));
+  it("AC-5: returns only a hotel when nothing better matched", async () => {
+    const { geocoder } = setup(() => Response.json([HOTEL]));
+
+    expect(await geocoder.find("Vienna", signal)).toEqual({
+      bounds: [
+        [2.2, 48.8],
+        [2.4, 48.9],
+      ],
+    });
+  });
+
+  it("AC-5: information boards alone mean nothing was found", async () => {
+    const board = {
+      category: "tourism",
+      type: "information",
+      boundingbox: HOTEL.boundingbox,
+    };
+    const { geocoder } = setup(() => Response.json([board]));
 
     expect(await geocoder.find("Vienna", signal)).toBeNull();
+  });
+
+  it("AC-3: a landmark listed after a hotel wins for an ambiguous query", async () => {
+    const { geocoder } = setup(() => Response.json([HOTEL, TOWER]));
+
+    expect(await geocoder.find("Eiffel", signal)).toEqual({
+      bounds: [
+        [2.28, 48.85],
+        [2.31, 48.87],
+      ],
+    });
+  });
+
+  it.each(["Hotel Eiffel Paris", "hotel Eiffel"])(
+    "AC-4: %s returns the hotel, not the tower",
+    async (query) => {
+      const { geocoder } = setup(() => Response.json([TOWER, HOTEL]));
+
+      expect(await geocoder.find(query, signal)).toEqual({
+        bounds: [
+          [2.2, 48.8],
+          [2.4, 48.9],
+        ],
+      });
+    },
+  );
+
+  it("AC-6: a town beats a hotel of the same name", async () => {
+    const { geocoder } = setup(() => Response.json([HOTEL, BRNO]));
+
+    expect(await geocoder.find("Vienna", signal)).toEqual({
+      bounds: [
+        [16.4283, 49.1096],
+        [16.7283, 49.2946],
+      ],
+    });
+  });
+
+  it("AC-7: a landmark point gets a small extent that shows it, not a city", async () => {
+    const colosseum = {
+      category: "historic",
+      type: "amphitheatre",
+      lat: "41.89",
+      lon: "12.49",
+      boundingbox: ["41.89", "41.89", "12.49", "12.49"],
+    };
+    const { geocoder } = setup(() => Response.json([colosseum]));
+
+    const found = await geocoder.find("Colosseum", signal);
+
+    const [[west, south], [east, north]] = found?.bounds ?? [
+      [0, 0],
+      [0, 0],
+    ];
+    expect(east - west).toBeLessThanOrEqual(0.05);
+    expect(north - south).toBeLessThanOrEqual(0.05);
+    expect((west + east) / 2).toBeCloseTo(12.49);
   });
 
   it("AC-1: skips a non-place first match and uses the first real place", async () => {

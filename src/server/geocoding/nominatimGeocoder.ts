@@ -2,25 +2,20 @@ import "server-only";
 import * as v from "valibot";
 import type { Bounds } from "@/shared/command/actions";
 import type { Clock } from "../state/types";
-import { ensureMinimumSize } from "./bounds";
+import {
+  DEFAULT_MIN_SPAN_DEGREES,
+  ensureMinimumSize,
+  LANDMARK_MIN_SPAN_DEGREES,
+} from "./bounds";
 import { type Center, mainBodyBounds } from "./mainBody";
+import { isLandmark, pickBest } from "./ranking";
 import { RequestSpacer } from "./requestSpacer";
 import { type Geocoder, GeocoderError } from "./types";
 
 const MIN_REQUEST_INTERVAL_MS = 1_000;
 const CACHE_SIZE = 200;
-// Free-text search also matches hotels, offices, information boards and the like, so a foreign
-// name such as "Vienna" can hit a hotel of that name. Only these kinds of objects count as a place.
-const PLACE_CATEGORIES = new Set([
-  "boundary",
-  "place",
-  "natural",
-  "waterway",
-  "landuse",
-  "highway",
-]);
-// The best match may be a non-place, so a few candidates are requested and filtered.
-const CANDIDATE_COUNT = "5";
+// The best match may be a hotel or a board, so several candidates are requested and ranked.
+const CANDIDATE_COUNT = "10";
 // Simplifies the returned outlines; they are only used to find the largest part of a place.
 const POLYGON_TOLERANCE_DEGREES = "0.1";
 
@@ -29,6 +24,7 @@ const coordinate = v.pipe(v.string(), v.transform(Number), v.finite());
 const resultsSchema = v.array(
   v.object({
     category: v.string(),
+    type: v.optional(v.string()),
     lat: v.optional(coordinate),
     lon: v.optional(coordinate),
     // Checked separately; anything unexpected here only means "use the plain box".
@@ -119,9 +115,7 @@ export class NominatimGeocoder implements Geocoder {
     if (!results.success) {
       throw new GeocoderError("Geocoder answer has an unexpected shape");
     }
-    const first = results.output.find((result) =>
-      PLACE_CATEGORIES.has(result.category),
-    );
+    const first = pickBest(place, results.output);
     if (!first) return null;
 
     const [south, north, west, east] = first.boundingbox;
@@ -133,6 +127,9 @@ export class NominatimGeocoder implements Geocoder {
       [west, south],
       [east, north],
     ];
-    return { bounds: ensureMinimumSize(bounds) };
+    const minSpan = isLandmark(first)
+      ? LANDMARK_MIN_SPAN_DEGREES
+      : DEFAULT_MIN_SPAN_DEGREES;
+    return { bounds: ensureMinimumSize(bounds, minSpan) };
   }
 }

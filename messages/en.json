@@ -18,7 +18,8 @@
       "moscow": "Moscow",
       "zoomToTokyo": "Zoom to Tokyo",
       "showGrandCanyon": "Show the Grand Canyon",
-      "mountEverest": "Mount Everest"
+      "mountEverest": "Mount Everest",
+      "zoomToColosseum": "Zoom to the Colosseum"
     }
   },
   "command": {
