@@ -15,7 +15,9 @@ Early development. Current features:
   without reloading the map
 - Command input at the bottom edge of the map with rotating example hints. Zoom commands work:
   Czech or English text is interpreted by AI (Groq) and the place is looked up with a geocoder
-  (Nominatim), anywhere in the world. Other commands get a "not supported" message.
+  (Nominatim), anywhere in the world. Towns, regions and natural features can be searched, and so can
+  landmarks such as the Eiffel Tower or the Colosseum ("Přibliž na Koloseum"); a landmark wins over a
+  hotel of a similar name unless the command asks for a hotel. Other commands get a "not supported" message.
 - Server-side protection of the free services: input validation, a 10 s pause after each processed
   command (also an unsuccessful one), 10 commands per minute per IP address and a daily cap on AI calls; messages are shown in
   the current language and switch with it

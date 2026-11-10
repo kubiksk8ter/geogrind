@@ -126,6 +126,7 @@ describe("hints and basics", () => {
         "Přibliž na Tokio",
         "Ukaž Grand Canyon",
         "Mount Everest",
+        "Přibliž na Koloseum",
       ],
     ],
     [
@@ -139,6 +140,7 @@ describe("hints and basics", () => {
         "Zoom to Tokyo",
         "Show the Grand Canyon",
         "Mount Everest",
+        "Zoom to the Colosseum",
       ],
     ],
   ] as const)(

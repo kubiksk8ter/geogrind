@@ -8,6 +8,7 @@ export const PLACEHOLDER_KEYS = [
   "zoomToTokyo",
   "showGrandCanyon",
   "mountEverest",
+  "zoomToColosseum",
 ] as const;
 
 export const ROTATION_INTERVAL_MS = 4000;
