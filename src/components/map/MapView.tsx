@@ -1,7 +1,7 @@
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { CreateMapEngine } from "@/map";
+import type { CreateMapEngine, MapEngine, MapTarget } from "@/map";
 import { CommandInput } from "../command-input/CommandInput";
 import { LanguageSwitch } from "../language-switch/LanguageSwitch";
 import { FULL_SCREEN_CLASS_NAME } from "../sharedConstants";
@@ -11,30 +11,41 @@ export function MapView({ createEngine }: { createEngine: CreateMapEngine }) {
   const t = useTranslations("map");
   const containerRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
-  const [controlsSlot, setControlsSlot] = useState<HTMLElement | null>(null);
+  const [engine, setEngine] = useState<MapEngine | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
     if (failed || !container) return;
 
-    const engine = createEngine({
+    const created = createEngine({
       container,
       onFailure: () => setFailed(true),
     });
-    setControlsSlot(engine.controlsSlot);
+    setEngine(created);
     return () => {
-      setControlsSlot(null);
-      engine.destroy();
+      setEngine(null);
+      created.destroy();
     };
   }, [createEngine, failed]);
+
+  const moveMap = useCallback(
+    (target: MapTarget) => {
+      // Asked at call time, so a changed system setting applies to the next command.
+      const reducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      engine?.moveTo(target, reducedMotion ? "jump" : "animate");
+    },
+    [engine],
+  );
 
   if (failed) return <MapFailure />;
 
   return (
     <section className={FULL_SCREEN_CLASS_NAME} aria-label={t("label")}>
       <div className="size-full" ref={containerRef} />
-      <CommandInput />
-      {controlsSlot && createPortal(<LanguageSwitch />, controlsSlot)}
+      <CommandInput onMove={engine ? moveMap : null} />
+      {engine && createPortal(<LanguageSwitch />, engine.controlsSlot)}
     </section>
   );
 }

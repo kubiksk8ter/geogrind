@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   addControl: vi.fn(),
   construct: vi.fn(),
   addImage: vi.fn(),
+  fitBounds: vi.fn(),
   resolveMissingImage: undefined as ((id: string) => void) | undefined,
 }));
 
@@ -22,6 +23,7 @@ vi.mock("maplibre-gl", () => ({
     }
     remove = mocks.remove;
     addImage = mocks.addImage;
+    fitBounds = mocks.fitBounds;
     hasImage = vi.fn(() => false);
     setMissingStyleImageResolver(resolver: (id: string) => void) {
       mocks.resolveMissingImage = resolver;
@@ -44,6 +46,7 @@ beforeEach(() => {
   mocks.remove.mockReset();
   mocks.addControl.mockReset();
   mocks.addImage.mockReset();
+  mocks.fitBounds.mockReset();
   mocks.resolveMissingImage = undefined;
 });
 afterEach(() => vi.useRealTimers());
@@ -143,6 +146,46 @@ describe("createMapEngine", () => {
       "office",
       expect.objectContaining({ width: 1, height: 1 }),
     );
+  });
+
+  describe("moveTo", () => {
+    const target = {
+      bounds: [
+        [16.4, 49.1],
+        [16.7, 49.3],
+      ] satisfies [[number, number], [number, number]],
+    };
+
+    it("FR-2: fits the whole target with a capped zoom", () => {
+      const engine = createMapEngine({ container, onFailure: vi.fn() });
+
+      engine.moveTo(target, "animate");
+
+      expect(mocks.fitBounds).toHaveBeenCalledExactlyOnceWith(
+        target.bounds,
+        expect.objectContaining({ maxZoom: MAP_CONFIG.targetMaxZoom }),
+      );
+    });
+
+    it("animates the move for normal motion", () => {
+      const engine = createMapEngine({ container, onFailure: vi.fn() });
+
+      engine.moveTo(target, "animate");
+
+      expect(mocks.fitBounds.mock.calls[0]?.[1]).toMatchObject({
+        animate: true,
+      });
+    });
+
+    it("AC-26: jumps instead of animating for reduced motion", () => {
+      const engine = createMapEngine({ container, onFailure: vi.fn() });
+
+      engine.moveTo(target, "jump");
+
+      expect(mocks.fitBounds.mock.calls[0]?.[1]).toMatchObject({
+        animate: false,
+      });
+    });
   });
 
   it("destroy removes the map and cancels the timeout", () => {

@@ -1,13 +1,14 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
 import type { Locale } from "@/i18n/routing";
-import type { CreateMapEngine, MapEngineOptions } from "@/map";
+import type { CreateMapEngine, MapEngine, MapEngineOptions } from "@/map";
 import { MapView } from "./MapView";
 
 beforeEach(() => {
   vi.stubGlobal("cookieStore", { set: () => Promise.resolve() });
+  window.localStorage.clear();
   window.history.replaceState(null, "", "/cs");
 });
 afterEach(() => {
@@ -31,12 +32,19 @@ function renderMap(locale: Locale, createEngine: CreateMapEngine) {
 
 function setup(locale: Locale = "cs") {
   const destroy = vi.fn();
+  const moveTo = vi.fn<MapEngine["moveTo"]>();
   const calls: MapEngineOptions[] = [];
   const createEngine = vi.fn<CreateMapEngine>((options) => {
     calls.push(options);
-    return { controlsSlot: fakeSlot(), destroy };
+    return { controlsSlot: fakeSlot(), moveTo, destroy };
   });
-  return { ...renderMap(locale, createEngine), calls, destroy, createEngine };
+  return {
+    ...renderMap(locale, createEngine),
+    calls,
+    destroy,
+    createEngine,
+    moveTo,
+  };
 }
 
 describe("MapView", () => {
@@ -52,8 +60,8 @@ describe("MapView", () => {
   });
 
   it.each([
-    ["cs", "Mapa České republiky"],
-    ["en", "Map of the Czech Republic"],
+    ["cs", "Mapa"],
+    ["en", "Map"],
   ] as const)("AC-8: names the map region in %s", (locale, name) => {
     setup(locale);
 
@@ -62,7 +70,11 @@ describe("MapView", () => {
 
   it("FR-6: renders the language switch into the engine's controls slot", () => {
     const slot = fakeSlot();
-    renderMap("cs", () => ({ controlsSlot: slot, destroy: vi.fn() }));
+    renderMap("cs", () => ({
+      controlsSlot: slot,
+      moveTo: vi.fn(),
+      destroy: vi.fn(),
+    }));
 
     expect(slot.contains(screen.getByRole("radiogroup"))).toBe(true);
   });
@@ -78,9 +90,7 @@ describe("MapView", () => {
 
     act(() => screen.getByRole("radio", { name: "Angličtina" }).click());
 
-    expect(
-      screen.getByRole("region", { name: "Map of the Czech Republic" }),
-    ).toBeDefined();
+    expect(screen.getByRole("region", { name: "Map" })).toBeDefined();
     expect(createEngine).toHaveBeenCalledOnce();
     expect(destroy).not.toHaveBeenCalled();
   });
@@ -106,10 +116,65 @@ describe("MapView", () => {
   it("shows the failure message when the engine fails during creation", () => {
     renderMap("en", ({ onFailure }) => {
       onFailure("webgl");
-      return { controlsSlot: document.createElement("div"), destroy: vi.fn() };
+      return {
+        controlsSlot: document.createElement("div"),
+        moveTo: vi.fn(),
+        destroy: vi.fn(),
+      };
     });
 
     expect(screen.getByRole("alert")).toBeDefined();
     expect(screen.queryByRole("radiogroup")).toBeNull();
+  });
+
+  describe("command wiring", () => {
+    const BOUNDS = [
+      [16.4, 49.1],
+      [16.7, 49.3],
+    ];
+
+    function stubEnvironment(reducedMotion: boolean) {
+      vi.stubGlobal("fetch", async () =>
+        Response.json({
+          ok: true,
+          result: { action: "zoom_to_place", bounds: BOUNDS },
+          cooldownSeconds: 10,
+        }),
+      );
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: reducedMotion && query.includes("prefers-reduced-motion"),
+      }));
+    }
+
+    async function zoomToBrno() {
+      const input = screen.getByRole("textbox");
+      fireEvent.change(input, { target: { value: "Zoom to Brno" } });
+      const form = input.closest("form");
+      if (!form) throw new Error("no form");
+      await act(async () => {
+        fireEvent.submit(form);
+      });
+    }
+
+    it("AC-1: a successful command moves the map with an animation", async () => {
+      const { moveTo } = setup("en");
+      stubEnvironment(false);
+
+      await zoomToBrno();
+
+      expect(moveTo).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ bounds: BOUNDS }),
+        "animate",
+      );
+    });
+
+    it("AC-26: with reduced motion the map jumps", async () => {
+      const { moveTo } = setup("en");
+      stubEnvironment(true);
+
+      await zoomToBrno();
+
+      expect(moveTo).toHaveBeenCalledExactlyOnceWith(expect.anything(), "jump");
+    });
   });
 });
