@@ -44,6 +44,44 @@ describe("command response schema", () => {
     ).toBe(true);
   });
 
+  const success = (highlight: unknown) => ({
+    ok: true,
+    result: {
+      action: "zoom_to_place",
+      bounds: [
+        [16, 49],
+        [17, 50],
+      ],
+      highlight,
+    },
+    cooldownSeconds: 10,
+  });
+
+  it("accepts a success with a highlight", () => {
+    expect(
+      parse(success({ type: "Point", coordinates: [16.5, 49.5] })).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ["an unknown geometry type", { type: "Circle", coordinates: [1, 2] }],
+    ["a point out of range", { type: "Point", coordinates: [16, 99] }],
+    [
+      "an unclosed ring",
+      {
+        type: "Polygon",
+        coordinates: [
+          [
+            [1, 2],
+            [3, 4],
+          ],
+        ],
+      },
+    ],
+  ])("rejects a highlight with %s", (_name, highlight) => {
+    expect(parse(success(highlight)).success).toBe(false);
+  });
+
   it.each([
     [{ code: "wait", retryAfterSeconds: 4 }],
     [{ code: "ai_resting", resetAt: "2026-11-10T00:00:00.000Z" }],

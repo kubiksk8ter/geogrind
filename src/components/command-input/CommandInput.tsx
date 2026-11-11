@@ -25,16 +25,24 @@ const MESSAGE_CLASS_NAMES = {
 } as const;
 
 export function CommandInput({
-  onMove,
+  onMoveAction,
+  onSendAction,
 }: {
   /** Moves the map; null while the map is not ready. */
-  onMove: ((target: MapTarget) => void) | null;
+  onMoveAction: ((target: MapTarget) => void) | null;
+  /** Called when a command is sent, before the answer arrives. */
+  onSendAction: () => void;
 }) {
   const t = useTranslations("input");
   const tCommand = useTranslations("command");
   const { locale } = useLocaleSwitch();
   const { value, setValue, submit, notice, pausedSeconds, inputRef } =
-    useCommandInputController({ client: sendCommand, onMove, locale });
+    useCommandInputController({
+      client: sendCommand,
+      onMove: onMoveAction,
+      onSend: onSendAction,
+      locale,
+    });
   const hintIndex = usePlaceholderRotation({
     count: PLACEHOLDER_KEYS.length,
     paused: value !== "",

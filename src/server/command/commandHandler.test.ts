@@ -2,6 +2,7 @@ import * as v from "valibot";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Bounds } from "@/shared/command/actions";
 import { commandResponseSchema } from "@/shared/command/commandContract";
+import type { Highlight } from "@/shared/command/highlightSchema";
 import type { AiClient, AiResult } from "../ai/types";
 import { type AppEnv, ConfigError } from "../config/env";
 import type { Geocoder } from "../geocoding/types";
@@ -127,6 +128,19 @@ describe("success", () => {
       ok: true,
       result: { action: "zoom_to_place", bounds: BRNO },
       cooldownSeconds: 10,
+    });
+  });
+
+  it("AC-1: forwards the geometry to highlight", async () => {
+    const highlight: Highlight = { type: "Point", coordinates: [16.6, 49.2] };
+    h.find.mockResolvedValue({ bounds: BRNO, highlight });
+
+    const body = await (await h.send()).json();
+
+    expect(body.result).toEqual({
+      action: "zoom_to_place",
+      bounds: BRNO,
+      highlight,
     });
   });
 

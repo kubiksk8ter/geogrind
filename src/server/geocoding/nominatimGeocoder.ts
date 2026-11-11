@@ -1,14 +1,16 @@
 import "server-only";
 import * as v from "valibot";
 import type { Bounds } from "@/shared/command/actions";
+import type { Highlight } from "@/shared/command/highlightSchema";
 import type { Clock } from "../state/types";
 import {
   DEFAULT_MIN_SPAN_DEGREES,
   ensureMinimumSize,
   LANDMARK_MIN_SPAN_DEGREES,
 } from "./bounds";
+import { toMapGeometry } from "./geometryForMap";
 import { type Center, mainBodyBounds } from "./mainBody";
-import { isLandmark, pickBest } from "./ranking";
+import { isHighlighted, isLandmark, pickBest } from "./ranking";
 import { RequestSpacer } from "./requestSpacer";
 import { type Geocoder, GeocoderError } from "./types";
 
@@ -16,8 +18,9 @@ const MIN_REQUEST_INTERVAL_MS = 1_000;
 const CACHE_SIZE = 200;
 // The best match may be a hotel or a board, so several candidates are requested and ranked.
 const CANDIDATE_COUNT = "10";
-// Simplifies the returned outlines; they are only used to find the largest part of a place.
-const POLYGON_TOLERANCE_DEGREES = "0.1";
+// Simplifies the returned outlines. About 10 m: fine enough to draw a building or a bridge, and
+// still a good basis for finding the largest part of a place.
+const POLYGON_TOLERANCE_DEGREES = "0.0001";
 
 // Nominatim returns the box as ["south", "north", "west", "east"] strings.
 const coordinate = v.pipe(v.string(), v.transform(Number), v.finite());
@@ -47,7 +50,7 @@ export interface NominatimOptions {
   fetch?: typeof fetch;
 }
 
-type Found = { bounds: Bounds } | null;
+type Found = { bounds: Bounds; highlight?: Highlight } | null;
 
 export class NominatimGeocoder implements Geocoder {
   private readonly spacer: RequestSpacer;
@@ -130,6 +133,12 @@ export class NominatimGeocoder implements Geocoder {
     const minSpan = isLandmark(first)
       ? LANDMARK_MIN_SPAN_DEGREES
       : DEFAULT_MIN_SPAN_DEGREES;
-    return { bounds: ensureMinimumSize(bounds, minSpan) };
+    const highlight = isHighlighted(first)
+      ? toMapGeometry(first.geojson)
+      : undefined;
+    return {
+      bounds: ensureMinimumSize(bounds, minSpan),
+      ...(highlight && { highlight }),
+    };
   }
 }

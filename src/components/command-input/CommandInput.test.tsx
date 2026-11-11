@@ -68,9 +68,11 @@ function setup(
   {
     response = success(),
     onMove = vi.fn(),
+    onSend = vi.fn(),
   }: {
     response?: CommandResponse;
     onMove?: ((target: MapTarget) => void) | null;
+    onSend?: () => void;
   } = {},
 ) {
   const client = sendCommandMock;
@@ -78,13 +80,13 @@ function setup(
   client.mockImplementation(async () => response);
   const ui = (
     <LocaleProvider initialLocale={locale}>
-      <CommandInput onMove={onMove} />
+      <CommandInput onMoveAction={onMove} onSendAction={onSend} />
       <SwitchToEnglish />
     </LocaleProvider>
   );
   const view = render(ui);
   const input = screen.getByRole("textbox");
-  return { client, onMove, input, ui, ...view };
+  return { client, onMove, onSend, input, ui, ...view };
 }
 
 const type = (input: HTMLElement, value: string) =>
@@ -241,6 +243,36 @@ describe("submitting", () => {
     await act(async () => answer(failure("error")));
     expect(input.getAttribute("aria-busy")).toBe("false");
   });
+
+  it("AC-7: tells the map a command is sent before the answer arrives", async () => {
+    let answer: (response: CommandResponse) => void = () => {};
+    const { input, client, onSend, onMove } = setup("cs");
+    client.mockImplementation(
+      () => new Promise((resolve) => (answer = resolve)),
+    );
+    type(input, "Přibliž na Brno");
+
+    await submit(input);
+
+    expect(onSend).toHaveBeenCalledOnce();
+    expect(onMove).not.toHaveBeenCalled();
+    await act(async () => answer(success()));
+  });
+
+  it.each([
+    ["a failure", failure("not_found")],
+    ["a cooldown message", failure("wait", { retryAfterSeconds: 5 })],
+  ])(
+    "AC-8: %s is still preceded by the highlight removal",
+    async (_name, response) => {
+      const { input, onSend } = setup("cs", { response });
+      type(input, "Přibliž na Brno");
+
+      await submit(input);
+
+      expect(onSend).toHaveBeenCalledOnce();
+    },
+  );
 
   it("AC-23: without a ready map shows the generic error and sends nothing", async () => {
     const { input, client } = setup("en", { onMove: null });
