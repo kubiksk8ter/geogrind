@@ -1,4 +1,5 @@
 import * as v from "valibot";
+import { highlightSchema } from "./highlightSchema";
 import { isCleanText } from "./text";
 
 export const MAX_PLACE_LENGTH = 100;
@@ -60,6 +61,8 @@ const zoomToPlace = {
   result: v.strictObject({
     action: v.literal("zoom_to_place"),
     bounds: boundsSchema,
+    /** Present only for landmarks, POIs and small natural or linear objects. */
+    highlight: v.optional(highlightSchema),
   }),
 } as const satisfies ActionDefinition;
 

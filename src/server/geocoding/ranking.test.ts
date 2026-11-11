@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { namesPoiKind, pickBest } from "./ranking";
+import { isHighlighted, namesPoiKind, pickBest } from "./ranking";
 
 const hotel = { name: "hotel", category: "tourism", type: "hotel" };
 const shop = { name: "shop", category: "shop", type: "gift" };
@@ -7,6 +7,29 @@ const board = { name: "board", category: "tourism", type: "information" };
 const tower = { name: "tower", category: "tourism", type: "attraction" };
 const castle = { name: "castle", category: "historic", type: "castle" };
 const town = { name: "town", category: "boundary", type: "administrative" };
+
+describe("isHighlighted", () => {
+  it.each([
+    ["AC-1: a landmark", castle],
+    ["AC-6: a hotel", hotel],
+    ["AC-6: a shop", shop],
+    ["AC-3: a river", { category: "waterway", type: "river" }],
+    ["AC-3: a street", { category: "highway", type: "residential" }],
+    ["AC-1: a peak", { category: "natural", type: "peak" }],
+  ])("%s is highlighted", (_name, candidate) => {
+    expect(isHighlighted(candidate)).toBe(true);
+  });
+
+  it.each([
+    ["a country, state or district", town],
+    ["a town or village", { category: "place", type: "town" }],
+    ["a national park", { category: "boundary", type: "national_park" }],
+    ["a land-use area", { category: "landuse", type: "forest" }],
+    ["an information board", board],
+  ])("AC-5: %s is not highlighted", (_name, candidate) => {
+    expect(isHighlighted(candidate)).toBe(false);
+  });
+});
 
 describe("namesPoiKind", () => {
   it.each([

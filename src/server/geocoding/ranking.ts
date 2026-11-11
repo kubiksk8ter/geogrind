@@ -93,6 +93,22 @@ export function isLandmark(candidate: Candidate): boolean {
   return tierOf(candidate) === "landmark";
 }
 
+// Administrative and large-area results (boundary, place, landuse) are not highlighted.
+const HIGHLIGHTED_PLACE_CATEGORIES = new Set([
+  "natural",
+  "waterway",
+  "highway",
+]);
+
+/** Landmarks, POIs and small natural or linear objects are drawn on the map; towns and regions are not. */
+export function isHighlighted(candidate: Candidate): boolean {
+  const tier = tierOf(candidate);
+  if (tier === "landmark" || tier === "poi") return true;
+  return (
+    tier === "place" && HIGHLIGHTED_PLACE_CATEGORIES.has(candidate.category)
+  );
+}
+
 function wordsOf(query: string): string[] {
   return query
     .normalize("NFD")

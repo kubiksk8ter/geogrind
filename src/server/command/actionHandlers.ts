@@ -30,7 +30,11 @@ export async function runAction(
       return found
         ? {
             kind: "success",
-            result: { action: output.action, bounds: found.bounds },
+            result: {
+              action: output.action,
+              bounds: found.bounds,
+              ...(found.highlight && { highlight: found.highlight }),
+            },
           }
         : { kind: "not_found" };
     }

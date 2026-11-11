@@ -18,6 +18,9 @@ Early development. Current features:
   (Nominatim), anywhere in the world. Towns, regions and natural features can be searched, and so can
   landmarks such as the Eiffel Tower or the Colosseum ("Přibliž na Koloseum"); a landmark wins over a
   hotel of a similar name unless the command asks for a hotel. Other commands get a "not supported" message.
+- Highlight of the found object after a zoom: landmarks, hotels and other POIs, natural features, rivers
+  and streets are drawn on the map (a point or an outline); towns,
+  regions, countries and protected areas are not. The highlight disappears as soon as the next command is sent, and fades out on its own 30 s after the map has reached it.
 - Server-side protection of the free services: input validation, a 10 s pause after each processed
   command (also an unsuccessful one), 10 commands per minute per IP address and a daily cap on AI calls; messages are shown in
   the current language and switch with it
@@ -74,7 +77,7 @@ npm start          # run the production build
 src/app/         routes, layouts, global styles ([locale] segment)
 src/app/api/     Route Handler of the command endpoint (wiring only)
 src/components/  React components, one folder per feature (map, language-switch, command-input)
-src/map/         map engine interface, MapLibre implementation, map config
+src/map/         map engine interface, MapLibre implementation (incl. highlight layers), map config
 src/server/      server-only code: command pipeline, AI client, geocoder, limits state, env config
 src/shared/      contracts shared by browser and server (action list, schemas, text rules)
 src/config/      app-wide constants

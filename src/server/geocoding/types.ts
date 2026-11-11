@@ -1,8 +1,15 @@
 import type { Bounds } from "@/shared/command/actions";
+import type { Highlight } from "@/shared/command/highlightSchema";
 
 export interface Geocoder {
-  /** The place's bounding box, or null when nothing was found. Other failures throw. */
-  find(place: string, signal: AbortSignal): Promise<{ bounds: Bounds } | null>;
+  /**
+   * The place's bounding box and, for landmarks and other small objects, the geometry to draw;
+   * null when nothing was found. Other failures throw.
+   */
+  find(
+    place: string,
+    signal: AbortSignal,
+  ): Promise<{ bounds: Bounds; highlight?: Highlight } | null>;
 }
 
 /** The geocoder failed; the message never contains the provider's response. */

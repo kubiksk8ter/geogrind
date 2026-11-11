@@ -39,12 +39,17 @@ export function MapView({ createEngine }: { createEngine: CreateMapEngine }) {
     [engine],
   );
 
+  const clearHighlight = useCallback(() => engine?.clearHighlight(), [engine]);
+
   if (failed) return <MapFailure />;
 
   return (
     <section className={FULL_SCREEN_CLASS_NAME} aria-label={t("label")}>
       <div className="size-full" ref={containerRef} />
-      <CommandInput onMove={engine ? moveMap : null} />
+      <CommandInput
+        onMoveAction={engine ? moveMap : null}
+        onSendAction={clearHighlight}
+      />
       {engine && createPortal(<LanguageSwitch />, engine.controlsSlot)}
     </section>
   );

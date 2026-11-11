@@ -60,7 +60,7 @@ describe("NominatimGeocoder request", () => {
       limit: "10",
       format: "jsonv2",
       polygon_geojson: "1",
-      polygon_threshold: "0.1",
+      polygon_threshold: "0.0001",
       addressdetails: "0",
     });
     expect(init?.signal).toBe(signal);
@@ -279,6 +279,164 @@ describe("NominatimGeocoder result", () => {
 
     expect(error).toBeInstanceOf(GeocoderError);
     expect(String(error)).not.toContain("secret-body");
+  });
+});
+
+describe("NominatimGeocoder highlight", () => {
+  const square = [
+    [2.29, 48.85],
+    [2.31, 48.85],
+    [2.31, 48.87],
+    [2.29, 48.87],
+    [2.29, 48.85],
+  ];
+  const polygon = { type: "Polygon", coordinates: [square] };
+  const withGeometry = <T extends object>(result: T, geojson: unknown) => ({
+    ...result,
+    geojson,
+  });
+
+  it("AC-1: a landmark answers with its polygon", async () => {
+    const { geocoder } = setup(() =>
+      Response.json([withGeometry(TOWER, polygon)]),
+    );
+
+    expect((await geocoder.find("Eiffel", signal))?.highlight).toEqual(polygon);
+  });
+
+  it("AC-2: a landmark point is passed on exactly as received", async () => {
+    const point = { type: "Point", coordinates: [2.2945, 48.8584] };
+    const { geocoder } = setup(() =>
+      Response.json([withGeometry(TOWER, point)]),
+    );
+
+    expect((await geocoder.find("Eiffel", signal))?.highlight).toEqual(point);
+  });
+
+  it("AC-3: a river answers with its line", async () => {
+    const line = { type: "LineString", coordinates: square };
+    const river = withGeometry(
+      { category: "waterway", type: "river", boundingbox: TOWER.boundingbox },
+      line,
+    );
+    const { geocoder } = setup(() => Response.json([river]));
+
+    expect((await geocoder.find("Vltava", signal))?.highlight).toEqual(line);
+  });
+
+  it("AC-4: a multi-polygon landmark keeps all its parts", async () => {
+    const parts = { type: "MultiPolygon", coordinates: [[square], [square]] };
+    const { geocoder } = setup(() =>
+      Response.json([withGeometry(TOWER, parts)]),
+    );
+
+    expect((await geocoder.find("Eiffel", signal))?.highlight).toEqual(parts);
+  });
+
+  it("AC-5: a town answers without geometry, even though the server sent one", async () => {
+    const { geocoder } = setup(() =>
+      Response.json([withGeometry(BRNO, polygon)]),
+    );
+
+    const found = await geocoder.find("Brno", signal);
+
+    expect(found).toEqual({
+      bounds: [
+        [16.4283, 49.1096],
+        [16.7283, 49.2946],
+      ],
+    });
+    expect(found).not.toHaveProperty("highlight");
+  });
+
+  it("AC-6: a hotel is highlighted", async () => {
+    const { geocoder } = setup(() =>
+      Response.json([withGeometry(HOTEL, polygon)]),
+    );
+
+    expect((await geocoder.find("Hotel Eiffel", signal))?.highlight).toEqual(
+      polygon,
+    );
+  });
+
+  it.each([
+    ["is missing", TOWER],
+    ["has an unexpected type", withGeometry(TOWER, { type: "Nope" })],
+    ["is not geometry", withGeometry(TOWER, "x")],
+  ])(
+    "AC-9: a landmark whose geometry %s still zooms, without a highlight",
+    async (_name, landmark) => {
+      const { geocoder } = setup(() => Response.json([landmark]));
+
+      const found = await geocoder.find("Eiffel", signal);
+
+      expect(found?.bounds).toEqual([
+        [2.28, 48.85],
+        [2.31, 48.87],
+      ]);
+      expect(found).not.toHaveProperty("highlight");
+    },
+  );
+
+  it("AC-10: very detailed geometry is left out and the zoom still works", async () => {
+    const detailed = Array.from({ length: 60_000 }, (_, index) => [
+      2 + index / 1_000_000,
+      48 + (index % 2) / 1_000,
+    ]);
+    const line = { type: "LineString", coordinates: detailed };
+    const { geocoder } = setup(() =>
+      Response.json([withGeometry(TOWER, line)]),
+    );
+
+    const found = await geocoder.find("Eiffel", signal);
+
+    expect(found?.highlight).toBeUndefined();
+    expect(found?.bounds).toBeDefined();
+  });
+
+  it("AC-12: a repeated command is served from the cache with its highlight", async () => {
+    const { geocoder, fetchStub } = setup(() =>
+      Response.json([withGeometry(TOWER, polygon)]),
+    );
+
+    await geocoder.find("Eiffel", signal);
+    const again = await geocoder.find("Eiffel", signal);
+
+    expect(fetchStub).toHaveBeenCalledOnce();
+    expect(again?.highlight).toEqual(polygon);
+  });
+
+  it("AC-11: the view of a multi-area place is the same with the finer outline tolerance", async () => {
+    const mainland = [
+      [138.9, 35.5],
+      [139.9, 35.5],
+      [139.9, 35.9],
+      [138.9, 35.9],
+      [138.9, 35.5],
+    ];
+    const island = [
+      [150, 20],
+      [154, 20],
+      [154, 28],
+      [150, 28],
+      [150, 20],
+    ];
+    const tokyo = {
+      category: "boundary",
+      lat: "35.7",
+      lon: "139.4",
+      boundingbox: ["20", "35.9", "138.9", "154"],
+      geojson: { type: "MultiPolygon", coordinates: [[island], [mainland]] },
+    };
+    const { geocoder } = setup(() => Response.json([tokyo]));
+
+    const found = await geocoder.find("Tokyo", signal);
+
+    expect(found?.bounds).toEqual([
+      [138.9, 35.5],
+      [139.9, 35.9],
+    ]);
+    expect(found).not.toHaveProperty("highlight");
   });
 });
 

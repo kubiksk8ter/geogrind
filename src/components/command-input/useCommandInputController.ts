@@ -17,6 +17,8 @@ export interface CommandInputOptions {
   client: CommandClient;
   /** Null while the map is not ready; submitting then shows the generic error. */
   onMove: ((target: MapTarget) => void) | null;
+  /** Called once a command is sent, so the previous result is not left on the map. */
+  onSend: () => void;
   locale: Locale;
 }
 
@@ -24,6 +26,7 @@ export interface CommandInputOptions {
 export function useCommandInputController({
   client,
   onMove,
+  onSend,
   locale,
 }: CommandInputOptions) {
   const [value, setValueState] = useState("");
@@ -104,6 +107,7 @@ export function useCommandInputController({
       return;
     }
 
+    onSend();
     requestRunning.current = true;
     setNotice({ kind: "loading" });
     const response = await client({ text, locale });

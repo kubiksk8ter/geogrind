@@ -33,10 +33,11 @@ function renderMap(locale: Locale, createEngine: CreateMapEngine) {
 function setup(locale: Locale = "cs") {
   const destroy = vi.fn();
   const moveTo = vi.fn<MapEngine["moveTo"]>();
+  const clearHighlight = vi.fn<MapEngine["clearHighlight"]>();
   const calls: MapEngineOptions[] = [];
   const createEngine = vi.fn<CreateMapEngine>((options) => {
     calls.push(options);
-    return { controlsSlot: fakeSlot(), moveTo, destroy };
+    return { controlsSlot: fakeSlot(), moveTo, clearHighlight, destroy };
   });
   return {
     ...renderMap(locale, createEngine),
@@ -44,6 +45,7 @@ function setup(locale: Locale = "cs") {
     destroy,
     createEngine,
     moveTo,
+    clearHighlight,
   };
 }
 
@@ -73,6 +75,7 @@ describe("MapView", () => {
     renderMap("cs", () => ({
       controlsSlot: slot,
       moveTo: vi.fn(),
+      clearHighlight: vi.fn(),
       destroy: vi.fn(),
     }));
 
@@ -119,6 +122,7 @@ describe("MapView", () => {
       return {
         controlsSlot: document.createElement("div"),
         moveTo: vi.fn(),
+        clearHighlight: vi.fn(),
         destroy: vi.fn(),
       };
     });
@@ -166,6 +170,38 @@ describe("MapView", () => {
         expect.objectContaining({ bounds: BOUNDS }),
         "animate",
       );
+    });
+
+    it("AC-1: the highlight of the answer is passed to the map with the target", async () => {
+      const highlight = { type: "Point", coordinates: [16.6, 49.2] };
+      const { moveTo } = setup("en");
+      vi.stubGlobal("fetch", async () =>
+        Response.json({
+          ok: true,
+          result: { action: "zoom_to_place", bounds: BOUNDS, highlight },
+          cooldownSeconds: 10,
+        }),
+      );
+      vi.stubGlobal("matchMedia", () => ({ matches: false }));
+
+      await zoomToBrno();
+
+      expect(moveTo).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ highlight }),
+        "animate",
+      );
+    });
+
+    it("AC-7: sending a command removes the highlight before the map moves", async () => {
+      const { moveTo, clearHighlight } = setup("en");
+      stubEnvironment(false);
+      const order: string[] = [];
+      clearHighlight.mockImplementation(() => order.push("clear"));
+      moveTo.mockImplementation(() => order.push("move"));
+
+      await zoomToBrno();
+
+      expect(order).toEqual(["clear", "move"]);
     });
 
     it("AC-26: with reduced motion the map jumps", async () => {
