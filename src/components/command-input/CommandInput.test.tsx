@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, useLocaleSwitch } from "@/i18n/LocaleProvider";
 import type { Locale } from "@/i18n/routing";
 import type { MapTarget } from "@/map";
-import type { CommandResponse } from "@/shared/command/commandContract";
+import type { CommandResponse } from "@/shared/commandContract";
 import { CommandInput } from "./CommandInput";
 import type { CommandClient } from "./commandClient";
 import { NOTICE_DURATION_MS } from "./notice";

@@ -4,7 +4,7 @@ import { Input } from "@base-ui/react/input";
 import { useTranslations } from "next-intl";
 import { useLocaleSwitch } from "@/i18n/LocaleProvider";
 import type { MapTarget } from "@/map";
-import { MAX_COMMAND_LENGTH } from "@/shared/command/text";
+import { MAX_COMMAND_LENGTH } from "@/shared/text";
 import {
   FOCUS_RING_CLASS_NAME,
   TRANSITION_CLASS_NAME,

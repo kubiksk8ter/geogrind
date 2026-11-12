@@ -1,8 +1,5 @@
 import type { useTranslations } from "next-intl";
-import type {
-  CommandErrorCode,
-  Locale,
-} from "@/shared/command/commandContract";
+import type { CommandErrorCode, Locale } from "@/shared/commandContract";
 import type { Notice } from "./notice";
 
 type CommandTranslator = ReturnType<typeof useTranslations<"command">>;

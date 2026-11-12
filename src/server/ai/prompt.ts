@@ -1,5 +1,5 @@
-import { ACTION_LIST } from "@/shared/command/actions";
-import type { Locale } from "@/shared/command/commandContract";
+import { ACTION_LIST } from "@/shared/actions";
+import type { Locale } from "@/shared/commandContract";
 
 export const SYSTEM_PROMPT = [
   "You turn one command for a world map into JSON that matches the given schema.",

@@ -1,4 +1,4 @@
-import type { Bounds } from "@/shared/command/actions";
+import type { Bounds } from "@/shared/actions";
 
 // A point-like result (a single node) has no extent; the map still needs a box to fit.
 export const DEFAULT_MIN_SPAN_DEGREES = 0.01;

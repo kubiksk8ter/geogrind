@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MapTarget } from "@/map";
-import type { Locale } from "@/shared/command/commandContract";
-import { normalizeCommandText } from "@/shared/command/text";
+import type { Locale } from "@/shared/commandContract";
+import { normalizeCommandText } from "@/shared/text";
 import type { CommandClient } from "./commandClient";
 import { readCooldownEnd, saveCooldownEnd } from "./cooldownStorage";
 import { isTransient, NOTICE_DURATION_MS, type Notice } from "./notice";

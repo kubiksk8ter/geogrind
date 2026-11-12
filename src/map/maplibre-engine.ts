@@ -6,7 +6,7 @@ import {
   NavigationControl,
   setWorkerUrl,
 } from "maplibre-gl";
-import type { Highlight } from "@/shared/command/highlightSchema";
+import type { Highlight } from "@/shared/highlightSchema";
 import { MAP_CONFIG } from "./config";
 import {
   HIGHLIGHT_LAYERS,

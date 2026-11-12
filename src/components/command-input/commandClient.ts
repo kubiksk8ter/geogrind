@@ -4,7 +4,7 @@ import {
   type CommandRequest,
   type CommandResponse,
   commandResponseSchema,
-} from "@/shared/command/commandContract";
+} from "@/shared/commandContract";
 
 /** The whole request (AI and geocoding) has this long; then the user gets the generic error. */
 export const COMMAND_TIMEOUT_MS = 10_000;

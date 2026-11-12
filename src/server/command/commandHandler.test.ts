@@ -1,8 +1,8 @@
 import * as v from "valibot";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Bounds } from "@/shared/command/actions";
-import { commandResponseSchema } from "@/shared/command/commandContract";
-import type { Highlight } from "@/shared/command/highlightSchema";
+import type { Bounds } from "@/shared/actions";
+import { commandResponseSchema } from "@/shared/commandContract";
+import type { Highlight } from "@/shared/highlightSchema";
 import type { AiClient, AiResult } from "../ai/types";
 import { type AppEnv, ConfigError } from "../config/env";
 import type { Geocoder } from "../geocoding/types";

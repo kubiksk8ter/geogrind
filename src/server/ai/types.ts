@@ -1,5 +1,5 @@
-import type { ModelOutput } from "@/shared/command/actions";
-import type { Locale } from "@/shared/command/commandContract";
+import type { ModelOutput } from "@/shared/actions";
+import type { Locale } from "@/shared/commandContract";
 
 export type AiResult =
   | { kind: "output"; output: ModelOutput }

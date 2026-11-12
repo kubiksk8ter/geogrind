@@ -3,7 +3,7 @@ import * as v from "valibot";
 import {
   MODEL_OUTPUT_JSON_SCHEMA,
   modelResponseSchema,
-} from "@/shared/command/actions";
+} from "@/shared/actions";
 import { SYSTEM_PROMPT, userMessage } from "./prompt";
 import { type AiClient, AiError, type AiResult } from "./types";
 
