@@ -7,3 +7,28 @@
   box-sizing: border-box;
   max-width: calc(100dvw - 4.5rem);
 }
+
+/* MapLibre's zoom buttons get the same light-blue glow on mouse hover as our controls, fading in
+   and out (reduced motion: no animation). The glow follows the group's corners like on focus. */
+.maplibregl-ctrl-group button {
+  position: relative;
+}
+
+.maplibregl-ctrl-group button:not(:disabled):hover {
+  z-index: 1;
+  box-shadow: 0 0 2px 2px #0096ff;
+}
+
+.maplibregl-ctrl-group button:not(:disabled):hover:first-child {
+  border-radius: 4px 4px 0 0;
+}
+
+.maplibregl-ctrl-group button:not(:disabled):hover:last-child {
+  border-radius: 0 0 4px 4px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .maplibregl-ctrl-group button {
+    transition: box-shadow 0.3s ease-out;
+  }
+}
