@@ -63,7 +63,7 @@ Groq, geocoder, env, state file, browser-side response). Zod rejected: larger cl
 
 ### D-4: Closed action list in one place (FR-7, NFR-7, AC-30)
 
-`src/shared/command/actions.ts` is a registry: action name -> parameter schema (Valibot) and
+`src/shared/actions.ts` is a registry: action name -> parameter schema (Valibot) and
 strict JSON schema for Groq. Model output is a registry action or built-in `unsupported`. Server
 handlers are an exhaustive `Record<ActionName, Handler>`, so a new action fails compilation until
 handled; guard, validation, cooldown, limits and codes are action-agnostic. Now only
@@ -141,7 +141,7 @@ No `@types/*` needed. Vitest aliases `server-only` to an empty module. No Groq S
 | AI client | `AiClient` interface + Groq implementation | `src/server/ai/` |
 | Geocoder | `Geocoder` interface + Nominatim client, throttle, LRU | `src/server/geocoding/` |
 | State | `StateStore`, `Clock`, file and memory stores, limit rules | `src/server/state/` |
-| Shared contracts | Action registry, text rules, contract schemas | `src/shared/command/` |
+| Shared contracts | Action registry, text rules, contract schemas | `src/shared/` |
 | Command client, CommandInput (changed) | `fetch` wrapper, cooldown storage, states, countdown | `src/components/command-input/` |
 | MapView, MapEngine, messages (changed) | Input gets `moveTo`; `command.*` texts, new hint | `src/components/map/`, `src/map/`, `messages/` |
 
@@ -163,7 +163,7 @@ Server modules import `server-only`; pure logic is separate from I/O.
 ## Interfaces
 
 ```ts
-// src/shared/command/ (client-server contract, validated with Valibot on both sides)
+// src/shared/ (client-server contract, validated with Valibot on both sides)
 export type Locale = "cs" | "en";
 export interface CommandRequest { text: string; locale: Locale } // strict: no other fields
 export type Bounds = [[west: number, south: number], [east: number, north: number]];

@@ -1,7 +1,7 @@
 import "server-only";
 import * as v from "valibot";
-import type { Bounds } from "@/shared/command/actions";
-import type { Highlight } from "@/shared/command/highlightSchema";
+import type { Bounds } from "@/shared/actions";
+import type { Highlight } from "@/shared/highlightSchema";
 import type { Clock } from "../state/types";
 import {
   DEFAULT_MIN_SPAN_DEGREES,

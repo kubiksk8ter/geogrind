@@ -1,4 +1,8 @@
-import { EMPTY_STATE, type StateData, type StateStore } from "./types";
+import {
+  EMPTY_STATE,
+  type StateData,
+  type StateStore,
+} from "@/server/state/types";
 
 /** In-memory store for tests. */
 export class MemoryStateStore implements StateStore {

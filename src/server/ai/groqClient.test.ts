@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { MODEL_OUTPUT_JSON_SCHEMA } from "@/shared/command/actions";
+import { MODEL_OUTPUT_JSON_SCHEMA } from "@/shared/actions";
 import { GroqClient } from "./groqClient";
 import { SYSTEM_PROMPT } from "./prompt";
 import { AiError } from "./types";

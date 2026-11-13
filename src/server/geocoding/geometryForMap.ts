@@ -1,8 +1,5 @@
 import * as v from "valibot";
-import {
-  type Highlight,
-  highlightSchema,
-} from "@/shared/command/highlightSchema";
+import { type Highlight, highlightSchema } from "@/shared/highlightSchema";
 
 /**
  * Prepares the geometry that Nominatim returns for a result so that it can be sent to the

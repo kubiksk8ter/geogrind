@@ -4,9 +4,11 @@ import { Input } from "@base-ui/react/input";
 import { useTranslations } from "next-intl";
 import { useLocaleSwitch } from "@/i18n/LocaleProvider";
 import type { MapTarget } from "@/map";
-import { MAX_COMMAND_LENGTH } from "@/shared/command/text";
+import type { CommandResult } from "@/shared/actions";
+import { MAX_COMMAND_LENGTH } from "@/shared/text";
 import {
-  FOCUS_RING_CLASS_NAME,
+  MAP_CONTROL_CLASS_NAME,
+  MAP_CONTROL_FOCUS_CLASS_NAME,
   TRANSITION_CLASS_NAME,
 } from "../sharedConstants";
 import { sendCommand } from "./commandClient";
@@ -27,11 +29,17 @@ const MESSAGE_CLASS_NAMES = {
 export function CommandInput({
   onMoveAction,
   onSendAction,
+  onSuccessAction,
+  onRequestRunningChangeAction,
 }: {
   /** Moves the map; null while the map is not ready. */
   onMoveAction: ((target: MapTarget) => void) | null;
   /** Called when a command is sent, before the answer arrives. */
   onSendAction: () => void;
+  /** Called after a successful command, with the typed text and the answer. */
+  onSuccessAction?: (text: string, result: CommandResult) => void;
+  /** Called with true while a command request is running, false when it ends. */
+  onRequestRunningChangeAction?: (running: boolean) => void;
 }) {
   const t = useTranslations("input");
   const tCommand = useTranslations("command");
@@ -41,6 +49,8 @@ export function CommandInput({
       client: sendCommand,
       onMove: onMoveAction,
       onSend: onSendAction,
+      onSuccess: onSuccessAction,
+      onRequestRunningChange: onRequestRunningChangeAction,
       locale,
     });
   const hintIndex = usePlaceholderRotation({
@@ -87,7 +97,7 @@ export function CommandInput({
           disabled={pausedSeconds !== null}
           maxLength={MAX_COMMAND_LENGTH}
           autoComplete="off"
-          className={`h-11 w-full rounded-md border border-neutral-500 bg-white px-4 text-base text-neutral-900 shadow-md outline-3 outline-solid outline-transparent forced-colors:not-focus-visible:outline-0 transition-[border-color,outline-color] duration-300 focus-visible:duration-700 placeholder:text-neutral-600 focus-visible:border-blue-600 disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-neutral-700 ${pausedSeconds !== null ? "pr-20" : ""} ${FOCUS_RING_CLASS_NAME} ${TRANSITION_CLASS_NAME}`}
+          className={`h-11 w-full bg-white px-4 text-base text-neutral-900 transition-shadow duration-300 focus-visible:duration-700 placeholder:text-neutral-600 disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-neutral-700 ${pausedSeconds !== null ? "pr-20" : ""} ${MAP_CONTROL_CLASS_NAME} ${MAP_CONTROL_FOCUS_CLASS_NAME} ${TRANSITION_CLASS_NAME}`}
         />
         {pausedSeconds !== null && (
           <span

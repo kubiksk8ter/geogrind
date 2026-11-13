@@ -3,7 +3,7 @@ import * as v from "valibot";
 import {
   type CommandRequest,
   commandRequestSchema,
-} from "@/shared/command/commandContract";
+} from "@/shared/commandContract";
 import type { AiClient } from "../ai/types";
 import type { AppEnv } from "../config/env";
 import type { Geocoder } from "../geocoding/types";

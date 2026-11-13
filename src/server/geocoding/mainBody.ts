@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import type { Bounds } from "@/shared/command/actions";
+import type { Bounds } from "@/shared/actions";
 
 const position = v.pipe(v.array(v.number()), v.minLength(2));
 const ring = v.array(position);

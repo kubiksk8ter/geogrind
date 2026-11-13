@@ -9,7 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, useLocaleSwitch } from "@/i18n/LocaleProvider";
 import type { Locale } from "@/i18n/routing";
 import type { MapTarget } from "@/map";
-import type { CommandResponse } from "@/shared/command/commandContract";
+import type { CommandResult } from "@/shared/actions";
+import type { CommandResponse } from "@/shared/commandContract";
 import { CommandInput } from "./CommandInput";
 import type { CommandClient } from "./commandClient";
 import { NOTICE_DURATION_MS } from "./notice";
@@ -69,10 +70,14 @@ function setup(
     response = success(),
     onMove = vi.fn(),
     onSend = vi.fn(),
+    onSuccess = vi.fn<(text: string, result: CommandResult) => void>(),
+    onRequestRunningChange = vi.fn<(running: boolean) => void>(),
   }: {
     response?: CommandResponse;
     onMove?: ((target: MapTarget) => void) | null;
     onSend?: () => void;
+    onSuccess?: (text: string, result: CommandResult) => void;
+    onRequestRunningChange?: (running: boolean) => void;
   } = {},
 ) {
   const client = sendCommandMock;
@@ -80,13 +85,27 @@ function setup(
   client.mockImplementation(async () => response);
   const ui = (
     <LocaleProvider initialLocale={locale}>
-      <CommandInput onMoveAction={onMove} onSendAction={onSend} />
+      <CommandInput
+        onMoveAction={onMove}
+        onSendAction={onSend}
+        onSuccessAction={onSuccess}
+        onRequestRunningChangeAction={onRequestRunningChange}
+      />
       <SwitchToEnglish />
     </LocaleProvider>
   );
   const view = render(ui);
   const input = screen.getByRole("textbox");
-  return { client, onMove, onSend, input, ui, ...view };
+  return {
+    client,
+    onMove,
+    onSend,
+    onSuccess,
+    onRequestRunningChange,
+    input,
+    ui,
+    ...view,
+  };
 }
 
 const type = (input: HTMLElement, value: string) =>
@@ -553,5 +572,87 @@ describe("failures", () => {
     await submit(input);
 
     expect(onMove).toHaveBeenCalledOnce();
+  });
+});
+
+describe("reporting to the history", () => {
+  it("AC-3: a success is reported right after the map moved", async () => {
+    const order: string[] = [];
+    const { input } = setup("en", {
+      onMove: () => order.push("move"),
+      onSuccess: () => order.push("success"),
+    });
+    type(input, "Zoom to Brno");
+
+    await submit(input);
+
+    expect(order).toEqual(["move", "success"]);
+  });
+
+  it("AC-3: passes the normalised text and the result of the answer", async () => {
+    const { input, onSuccess } = setup("en");
+    type(input, "  Zoom   to Brno ");
+
+    await submit(input);
+
+    expect(onSuccess).toHaveBeenCalledExactlyOnceWith("Zoom to Brno", {
+      action: "zoom_to_place",
+      bounds: BRNO.bounds,
+    });
+  });
+
+  it.each([
+    ["unsupported"],
+    ["not_found"],
+    ["error"],
+    ["invalid_request"],
+    ["too_many_requests"],
+    ["ai_resting"],
+    ["wait"],
+  ] as const)(
+    "AC-4: the failure %s reports nothing to the history",
+    async (code) => {
+      const { input, onSuccess } = setup("en", { response: failure(code) });
+      type(input, "Zoom to Vienna");
+
+      await submit(input);
+
+      expect(onSuccess).not.toHaveBeenCalled();
+    },
+  );
+
+  it("AC-4: a submit before the map is ready reports nothing", async () => {
+    const { input, onSuccess, onRequestRunningChange } = setup("en", {
+      onMove: null,
+    });
+    type(input, "Zoom to Brno");
+
+    await submit(input);
+
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(onRequestRunningChange).not.toHaveBeenCalled();
+  });
+
+  it("AC-8: reports the running request until the answer arrives", async () => {
+    const { input, client, onRequestRunningChange } = setup("en");
+    let answer: (response: CommandResponse) => void = () => {};
+    client.mockImplementation(
+      () =>
+        new Promise<CommandResponse>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    type(input, "Zoom to Brno");
+
+    const form = input.closest("form");
+    if (!form) throw new Error("no form");
+    await act(async () => {
+      fireEvent.submit(form);
+    });
+    expect(onRequestRunningChange).toHaveBeenCalledExactlyOnceWith(true);
+
+    await act(async () => answer(failure("error")));
+    expect(onRequestRunningChange).toHaveBeenCalledTimes(2);
+    expect(onRequestRunningChange).toHaveBeenLastCalledWith(false);
   });
 });

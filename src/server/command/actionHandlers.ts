@@ -1,4 +1,4 @@
-import type { CommandResult, ModelOutput } from "@/shared/command/actions";
+import type { CommandResult, ModelOutput } from "@/shared/actions";
 import type { Geocoder } from "../geocoding/types";
 
 export type ActionOutcome =

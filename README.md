@@ -24,11 +24,16 @@ Early development. Current features:
 - Server-side protection of the free services: input validation, a 10 s pause after each processed
   command (also an unsuccessful one), 10 commands per minute per IP address and a daily cap on AI calls; messages are shown in
   the current language and switch with it
+- Side panel with the history of your successful commands (control below the language switch; tabbed,
+  only "History" for now). Clicking an entry moves the map there again and shows the highlight without
+  any request to the AI or the geocoder. Full screen on phones (closes after picking an entry), beside
+  a narrowed map from 768 px width. The history (up to 50 entries) stays in session storage of the
+  browser tab, so it survives a reload and ends with the tab; it is never sent to the server.
 - Short colour transitions on the input focus border and the CZ/EN selection;
   disabled with the system "reduced motion" setting
 
 Tech stack: TypeScript (strict), Next.js (App Router, with a Route Handler as the server part),
-next-intl, MapLibre GL JS, Tailwind CSS, Base UI, Valibot, Groq (AI), Nominatim (geocoding),
+next-intl, MapLibre GL JS, Tailwind CSS, Base UI, Zustand, Valibot, Groq (AI), Nominatim (geocoding),
 Vitest, Biome.
 
 ## Requirements and setup
@@ -76,7 +81,8 @@ npm start          # run the production build
 ```
 src/app/         routes, layouts, global styles ([locale] segment)
 src/app/api/     Route Handler of the command endpoint (wiring only)
-src/components/  React components, one folder per feature (map, language-switch, command-input)
+src/components/  React components, one folder per feature (map, language-switch, command-input,
+                 history = store, storage and History tab, side-panel = tabbed panel)
 src/map/         map engine interface, MapLibre implementation (incl. highlight layers), map config
 src/server/      server-only code: command pipeline, AI client, geocoder, limits state, env config
 src/shared/      contracts shared by browser and server (action list, schemas, text rules)

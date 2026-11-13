@@ -45,7 +45,7 @@ vi.mock("maplibre-gl", () => ({
   setWorkerUrl: vi.fn(),
 }));
 
-import type { Highlight } from "@/shared/command/highlightSchema";
+import type { Highlight } from "@/shared/highlightSchema";
 import { MAP_CONFIG } from "./config";
 import { HIGHLIGHT_SOURCE_ID } from "./highlightLayers";
 import {

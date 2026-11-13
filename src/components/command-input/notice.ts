@@ -1,4 +1,4 @@
-import type { CommandErrorCode } from "@/shared/command/commandContract";
+import type { CommandErrorCode } from "@/shared/commandContract";
 
 /** What the message area shows (and announces) right now. */
 export type Notice =

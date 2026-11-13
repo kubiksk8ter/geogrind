@@ -3,7 +3,7 @@ import type {
   GeoJSONSourceSpecification,
   LineLayerSpecification,
 } from "maplibre-gl";
-import type { Highlight } from "@/shared/command/highlightSchema";
+import type { Highlight } from "@/shared/highlightSchema";
 
 export const HIGHLIGHT_SOURCE_ID = "highlight";
 

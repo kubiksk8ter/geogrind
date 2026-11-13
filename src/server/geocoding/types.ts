@@ -1,5 +1,5 @@
-import type { Bounds } from "@/shared/command/actions";
-import type { Highlight } from "@/shared/command/highlightSchema";
+import type { Bounds } from "@/shared/actions";
+import type { Highlight } from "@/shared/highlightSchema";
 
 export interface Geocoder {
   /**

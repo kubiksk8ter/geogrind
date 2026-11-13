@@ -1,4 +1,4 @@
-import type { Clock } from "./types";
+import type { Clock } from "@/server/state/types";
 
 /** Manually advanced clock for tests. */
 export class FakeClock implements Clock {

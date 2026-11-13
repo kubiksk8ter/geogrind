@@ -1,7 +1,7 @@
 import type {
   CommandErrorCode,
   CommandResponse,
-} from "@/shared/command/commandContract";
+} from "@/shared/commandContract";
 
 /** An answer before it becomes an HTTP response; `code` is also what gets logged. */
 export interface PendingResponse {
