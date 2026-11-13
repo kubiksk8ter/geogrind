@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Bounds } from "@/shared/actions";
 import { commandResponseSchema } from "@/shared/commandContract";
 import type { Highlight } from "@/shared/highlightSchema";
+import { FakeClock } from "@/test/fakeClock";
+import { MemoryStateStore } from "@/test/memoryStateStore";
 import type { AiClient, AiResult } from "../ai/types";
 import { type AppEnv, ConfigError } from "../config/env";
 import type { Geocoder } from "../geocoding/types";
-import { FakeClock } from "../state/fakeClock";
 import { CommandLimits } from "../state/limits";
-import { MemoryStateStore } from "../state/memoryStateStore";
 import {
   COOLDOWN_MS,
   RATE_LIMIT_MAX,

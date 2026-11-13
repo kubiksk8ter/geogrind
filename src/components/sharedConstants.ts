@@ -18,3 +18,10 @@ export const MAP_CONTROL_FOCUS_INSET_CLASS_NAME =
 // Shared easing and reduced-motion opt-out; each component adds its own
 // transition-[...] properties and duration. Keep it a complete literal for Tailwind.
 export const TRANSITION_CLASS_NAME = "ease-out motion-reduce:transition-none";
+
+// Width of the side panel from the "md" breakpoint (48rem = 768 px) up; below it the panel is
+// full screen. The narrowed map must be exactly as wide as the rest (19rem = w-76).
+export const SIDE_PANEL_WIDTH_CLASS_NAME = "md:w-76";
+export const MAP_BESIDE_PANEL_CLASS_NAME = "md:w-[calc(100dvw-19rem)]";
+// The same breakpoint for code that must know which layout is active (modal or not).
+export const LARGE_SCREEN_QUERY = "(min-width: 48rem)";

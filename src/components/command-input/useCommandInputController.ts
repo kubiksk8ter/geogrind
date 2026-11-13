@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { MapTarget } from "@/map";
+import type { CommandResult } from "@/shared/actions";
 import type { Locale } from "@/shared/commandContract";
 import { normalizeCommandText } from "@/shared/text";
 import type { CommandClient } from "./commandClient";
@@ -19,6 +20,10 @@ export interface CommandInputOptions {
   onMove: ((target: MapTarget) => void) | null;
   /** Called once a command is sent, so the previous result is not left on the map. */
   onSend: () => void;
+  /** Called right after `onMove` for a successful command only, with the text that was typed. */
+  onSuccess?: (text: string, result: CommandResult) => void;
+  /** Called with true when a request starts and with false when it ends. */
+  onRequestRunningChange?: (running: boolean) => void;
   locale: Locale;
 }
 
@@ -27,6 +32,8 @@ export function useCommandInputController({
   client,
   onMove,
   onSend,
+  onSuccess,
+  onRequestRunningChange,
   locale,
 }: CommandInputOptions) {
   const [value, setValueState] = useState("");
@@ -109,26 +116,33 @@ export function useCommandInputController({
 
     onSend();
     requestRunning.current = true;
+    onRequestRunningChange?.(true);
     setNotice({ kind: "loading" });
-    const response = await client({ text, locale });
-    requestRunning.current = false;
-    if (!mounted.current) return;
+    try {
+      const response = await client({ text, locale });
+      if (!mounted.current) return;
 
-    if (response.ok) {
-      onMove(response.result);
-      // The command has been carried out, so the field is emptied for the next one.
-      setValueState("");
-      startPause(response.cooldownSeconds);
-      return;
+      if (response.ok) {
+        onMove(response.result);
+        onSuccess?.(text, response.result);
+        // The command has been carried out, so the field is emptied for the next one.
+        setValueState("");
+        startPause(response.cooldownSeconds);
+        return;
+      }
+      const { code, retryAfterSeconds, resetAt, cooldownSeconds } =
+        response.error;
+      if (code === "wait") {
+        startPause(retryAfterSeconds ?? FALLBACK_COOLDOWN_SECONDS);
+        return;
+      }
+      setNotice({ kind: "failure", code, retryAfterSeconds, resetAt });
+      if (cooldownSeconds) startPause(cooldownSeconds, { announce: false });
+    } finally {
+      // Also after an exception, so the history is never left locked for a finished request.
+      requestRunning.current = false;
+      onRequestRunningChange?.(false);
     }
-    const { code, retryAfterSeconds, resetAt, cooldownSeconds } =
-      response.error;
-    if (code === "wait") {
-      startPause(retryAfterSeconds ?? FALLBACK_COOLDOWN_SECONDS);
-      return;
-    }
-    setNotice({ kind: "failure", code, retryAfterSeconds, resetAt });
-    if (cooldownSeconds) startPause(cooldownSeconds, { announce: false });
   };
 
   return {

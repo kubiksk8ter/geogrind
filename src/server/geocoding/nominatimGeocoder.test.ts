@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { FakeClock } from "../state/fakeClock";
+import { FakeClock } from "@/test/fakeClock";
 import { NominatimGeocoder } from "./nominatimGeocoder";
 import { GeocoderError } from "./types";
 

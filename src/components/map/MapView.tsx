@@ -3,8 +3,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CreateMapEngine, MapEngine, MapTarget } from "@/map";
 import { CommandInput } from "../command-input/CommandInput";
+import { useHistoryStore } from "../history/HistoryStoreProvider";
 import { LanguageSwitch } from "../language-switch/LanguageSwitch";
-import { FULL_SCREEN_CLASS_NAME } from "../sharedConstants";
+import {
+  FULL_SCREEN_CLASS_NAME,
+  MAP_BESIDE_PANEL_CLASS_NAME,
+} from "../sharedConstants";
+import { SidePanel } from "../side-panel/SidePanel";
 import { MapFailure } from "./MapFailure";
 
 export function MapView({ createEngine }: { createEngine: CreateMapEngine }) {
@@ -12,6 +17,11 @@ export function MapView({ createEngine }: { createEngine: CreateMapEngine }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
   const [engine, setEngine] = useState<MapEngine | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const addEntry = useHistoryStore((state) => state.addEntry);
+  const setCommandInFlight = useHistoryStore(
+    (state) => state.setCommandInFlight,
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -44,13 +54,24 @@ export function MapView({ createEngine }: { createEngine: CreateMapEngine }) {
   if (failed) return <MapFailure />;
 
   return (
-    <section className={FULL_SCREEN_CLASS_NAME} aria-label={t("label")}>
+    <section
+      className={`${FULL_SCREEN_CLASS_NAME} ${panelOpen ? MAP_BESIDE_PANEL_CLASS_NAME : ""}`}
+      aria-label={t("label")}
+    >
       <div className="size-full" ref={containerRef} />
       <CommandInput
         onMoveAction={engine ? moveMap : null}
         onSendAction={clearHighlight}
+        onSuccessAction={addEntry}
+        onRequestRunningChangeAction={setCommandInFlight}
       />
       {engine && createPortal(<LanguageSwitch />, engine.controlsSlot)}
+      <SidePanel
+        open={panelOpen}
+        onOpenChange={setPanelOpen}
+        controlSlot={engine?.controlsSlot ?? null}
+        showResult={engine ? moveMap : null}
+      />
     </section>
   );
 }

@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { FakeClock } from "./fakeClock";
+import { FakeClock } from "@/test/fakeClock";
 import { FileStateStore } from "./fileStateStore";
 import { CommandLimits } from "./limits";
 import { type StateData, StateUnavailableError } from "./types";

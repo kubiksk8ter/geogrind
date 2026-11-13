@@ -4,6 +4,7 @@ import { Input } from "@base-ui/react/input";
 import { useTranslations } from "next-intl";
 import { useLocaleSwitch } from "@/i18n/LocaleProvider";
 import type { MapTarget } from "@/map";
+import type { CommandResult } from "@/shared/actions";
 import { MAX_COMMAND_LENGTH } from "@/shared/text";
 import {
   MAP_CONTROL_CLASS_NAME,
@@ -28,11 +29,17 @@ const MESSAGE_CLASS_NAMES = {
 export function CommandInput({
   onMoveAction,
   onSendAction,
+  onSuccessAction,
+  onRequestRunningChangeAction,
 }: {
   /** Moves the map; null while the map is not ready. */
   onMoveAction: ((target: MapTarget) => void) | null;
   /** Called when a command is sent, before the answer arrives. */
   onSendAction: () => void;
+  /** Called after a successful command, with the typed text and the answer. */
+  onSuccessAction?: (text: string, result: CommandResult) => void;
+  /** Called with true while a command request is running, false when it ends. */
+  onRequestRunningChangeAction?: (running: boolean) => void;
 }) {
   const t = useTranslations("input");
   const tCommand = useTranslations("command");
@@ -42,6 +49,8 @@ export function CommandInput({
       client: sendCommand,
       onMove: onMoveAction,
       onSend: onSendAction,
+      onSuccess: onSuccessAction,
+      onRequestRunningChange: onRequestRunningChangeAction,
       locale,
     });
   const hintIndex = usePlaceholderRotation({

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { FakeClock } from "./fakeClock";
+import { FakeClock } from "@/test/fakeClock";
+import { MemoryStateStore } from "@/test/memoryStateStore";
 import { CommandLimits } from "./limits";
-import { MemoryStateStore } from "./memoryStateStore";
 import {
   COOLDOWN_MS,
   RATE_LIMIT_MAX,

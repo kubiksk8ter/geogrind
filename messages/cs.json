@@ -34,5 +34,18 @@
     "countdown": "{seconds} s",
     "pausedStart": "Mapa se přesunula. Zadávání je pozastaveno na {seconds, plural, one {# sekundu} few {# sekundy} many {# sekundy} other {# sekund}}.",
     "resumed": "Můžete zadat další příkaz."
+  },
+  "panel": {
+    "open": "Otevřít boční panel",
+    "title": "Boční panel",
+    "close": "Zavřít boční panel",
+    "tabsLabel": "Sekce panelu",
+    "tabs": {
+      "history": "Historie"
+    },
+    "history": {
+      "listLabel": "Historie příkazů",
+      "empty": "Zatím žádné příkazy. Úspěšné příkazy se zobrazí zde."
+    }
   }
 }

@@ -34,5 +34,18 @@
     "countdown": "{seconds} s",
     "pausedStart": "The map has moved. Input is paused for {seconds, plural, one {# second} other {# seconds}}.",
     "resumed": "You can enter the next command."
+  },
+  "panel": {
+    "open": "Open side panel",
+    "title": "Side panel",
+    "close": "Close side panel",
+    "tabsLabel": "Panel sections",
+    "tabs": {
+      "history": "History"
+    },
+    "history": {
+      "listLabel": "Command history",
+      "empty": "No commands yet. Successful commands will appear here."
+    }
   }
 }

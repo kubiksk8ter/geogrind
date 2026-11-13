@@ -18,6 +18,8 @@
 - AI: Groq `openai/gpt-oss-20b` via plain `fetch` from a Route Handler – strict JSON schema
   output on the free tier; key only on the server.
 - Geocoding: Nominatim (OSM public instance) via `fetch`, worldwide (no country restriction).
+- Client state: Zustand 5 (vanilla store + React hook) – tiny, testable outside React; holds the
+  command history, mirrored to session storage (validated on load, quota-aware).
 - Server state: one JSON file on local disk behind a `StateStore` interface (single instance).
 - `server-only` marks server modules so they cannot reach the browser bundle.
 
@@ -25,7 +27,8 @@
 
 ```
 src/app/         routes, layouts, global styles ([locale] segment)
-src/components/  React components, one folder per feature (map, language-switch, command-input) with their hooks and tests
+src/components/  React components, one folder per feature (map, language-switch, command-input,
+                 history = store, storage and History tab, side-panel = tabbed panel) with their hooks and tests
 src/map/         MapEngine interface, MapLibre implementation, map config
 src/app/api/     Route Handler for the command endpoint (wiring only)
 src/server/      server-only code: command pipeline, ai, geocoding, state, config
@@ -82,7 +85,7 @@ Other server env: `CLIENT_IP_HEADER`, `APP_ORIGIN`, `STATE_DIR`, `DAILY_CAP` (se
   the language switch selection only –
   [design 004](design/004-motion-transitions.md)
 - AI zoom command: `POST /api/command` pipeline (guard, IP, limits, Groq, Nominatim); closed
-  action registry in `src/shared/command/actions.ts`; server returns result codes, never texts –
+  action registry in `src/shared/actions.ts`; server returns result codes, never texts –
   [design 005](design/005-ai-implementation.md)
 - Client IP only from an operator-named trusted header (`CLIENT_IP_HEADER`), because Next fills
   `x-forwarded-for` only when absent (forgeable); needs a reverse proxy –
@@ -92,5 +95,9 @@ Other server env: `CLIENT_IP_HEADER`, `APP_ORIGIN`, `STATE_DIR`, `DAILY_CAP` (se
   [design 005](design/005-ai-implementation.md)
 - Map moves by `MapEngine.moveTo` (`fitBounds`; reduced motion = jump); server sends bounds –
   [design 005](design/005-ai-implementation.md)
+- Side panel with command history: Zustand store, session-storage persistence with per-entry
+  validation, Base UI Dialog + Tabs (full screen below 768 px, beside a narrowed map from
+  768 px), re-run through the same `moveMap` without server calls; no server change –
+  [design 008](design/008-sidebar-history.md)
 - Tailwind CSS added at the user's request (supersedes "no Tailwind" in design 001); shared
   class sets live in `src/components/sharedConstants.ts`
