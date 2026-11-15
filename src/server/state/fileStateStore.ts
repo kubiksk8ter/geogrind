@@ -133,7 +133,8 @@ export class FileStateStore implements StateStore {
     }
   }
 
-  private async read(): Promise<StateData> {
+  /** Lock-free: every write is a temporary file renamed over the state file, never a partial one. */
+  async read(): Promise<StateData> {
     let raw: string;
     try {
       raw = await readFile(this.stateFile, "utf8");

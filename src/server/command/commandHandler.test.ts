@@ -638,6 +638,9 @@ describe("state problems", () => {
     async transact(): Promise<never> {
       throw new StateUnavailableError("corrupt");
     },
+    async read(): Promise<never> {
+      throw new StateUnavailableError("corrupt");
+    },
   };
 
   it("AC-29: unavailable state means the generic error and no AI call", async () => {

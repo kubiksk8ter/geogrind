@@ -41,11 +41,50 @@
     "close": "Close side panel",
     "tabsLabel": "Panel sections",
     "tabs": {
-      "history": "History"
+      "history": "History",
+      "metrics": "Metrics"
     },
     "history": {
       "listLabel": "Command history",
       "empty": "No commands yet. Successful commands will appear here."
+    },
+    "metrics": {
+      "ai": {
+        "title": "AI"
+      },
+      "loading": "Loading figures…",
+      "loadFailed": "The figures could not be loaded. Trying again.",
+      "outdated": "The figures could not be updated and may be out of date. Trying again.",
+      "empty": "The figures of the AI appear after the first command.",
+      "noData": "no data",
+      "model": {
+        "line": "<label>Model:</label> {model}"
+      },
+      "cap": {
+        "title": "AI requests",
+        "value": "{used} / {cap}",
+        "ariaValueText": "{used} of {cap} requests used",
+        "resets": "Renewal in {time}"
+      },
+      "tokensToday": {
+        "title": "Tokens used today (all users)"
+      },
+      "lastRequest": {
+        "title": "Last request (tokens)",
+        "prompt": "Input",
+        "completion": "Output",
+        "total": "Total"
+      },
+      "limits": {
+        "requests": "Requests per day (Groq)",
+        "tokens": "Tokens per minute",
+        "value": "{remaining} / {limit}",
+        "ariaValueText": "{remaining} of {limit} remaining",
+        "remainingOnly": "{remaining} remaining",
+        "resets": "Renews in {time}",
+        "resetUnknown": "Renewal time: unknown",
+        "renewed": "Renewed. The figure is out of date until the next command."
+      }
     }
   }
 }

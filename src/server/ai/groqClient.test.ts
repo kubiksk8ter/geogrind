@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { MODEL_OUTPUT_JSON_SCHEMA } from "@/shared/actions";
+import { FakeClock } from "@/test/fakeClock";
+import type { AiAnswer } from "./aiAnswer";
 import { GroqClient } from "./groqClient";
 import { SYSTEM_PROMPT } from "./prompt";
 import { AiError } from "./types";
@@ -216,5 +218,161 @@ describe("GroqClient failures", () => {
     });
 
     await expect(interpret()).rejects.toThrow("fetch failed");
+  });
+});
+
+describe("GroqClient usage reporting", () => {
+  const OUTPUT = { output: { action: "unsupported" } };
+
+  function observed(respond: () => Response, observe?: (a: AiAnswer) => void) {
+    const answers: AiAnswer[] = [];
+    const clock = new FakeClock();
+    const client = new GroqClient({
+      apiKey: API_KEY,
+      model: "test-model",
+      fetch: async () => respond(),
+      clock,
+      observe: observe ?? ((answer) => answers.push(answer)),
+    });
+    const interpret = () =>
+      client.interpret({ text: "Zoom to Brno", locale: "en" }, signal);
+    return { answers, clock, interpret };
+  }
+
+  const withUsage = (usage: unknown, headers: HeadersInit = {}) =>
+    Response.json(
+      {
+        choices: [
+          {
+            finish_reason: "stop",
+            message: { content: JSON.stringify(OUTPUT) },
+          },
+        ],
+        usage,
+      },
+      { headers },
+    );
+
+  it("AC-2: reports usage and limits of a successful answer", async () => {
+    const { answers, clock, interpret } = observed(() =>
+      withUsage(
+        { prompt_tokens: 120, completion_tokens: 30, total_tokens: 150 },
+        {
+          "x-ratelimit-remaining-tokens": "6000",
+          "x-ratelimit-limit-tokens": "8000",
+          "x-ratelimit-reset-tokens": "7.66s",
+        },
+      ),
+    );
+
+    await interpret();
+
+    expect(answers).toEqual([
+      {
+        receivedAt: clock.now(),
+        usage: { prompt: 120, completion: 30, total: 150 },
+        limits: {
+          requests: { remaining: null, limit: null, resetsAt: null },
+          tokens: {
+            remaining: 6000,
+            limit: 8000,
+            resetsAt: clock.now() + 7_660,
+          },
+        },
+      },
+    ]);
+  });
+
+  it("AC-2: reports usage of an answer whose output is rejected", async () => {
+    const { answers, interpret } = observed(() =>
+      Response.json({
+        choices: [{ finish_reason: "stop", message: { content: "nonsense" } }],
+        usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 },
+      }),
+    );
+
+    await expect(interpret()).rejects.toThrow(AiError);
+
+    expect(answers[0]?.usage).toEqual({
+      prompt: 100,
+      completion: 20,
+      total: 120,
+    });
+  });
+
+  it("AC-3, FR-4: reports a 429 with its headers and without usage", async () => {
+    const { answers, interpret } = observed(
+      () =>
+        new Response("{}", {
+          status: 429,
+          headers: {
+            "retry-after": "5",
+            "x-ratelimit-remaining-requests": "0",
+            "x-ratelimit-limit-requests": "500",
+          },
+        }),
+    );
+
+    await interpret();
+
+    expect(answers[0]?.usage).toBeNull();
+    expect(answers[0]?.limits.requests).toMatchObject({
+      remaining: 0,
+      limit: 500,
+    });
+  });
+
+  it.each([401, 500])("reports an HTTP %i without usage", async (status) => {
+    const { answers, interpret } = observed(
+      () => new Response("secret", { status }),
+    );
+
+    await expect(interpret()).rejects.toThrow(AiError);
+
+    expect(answers).toHaveLength(1);
+    expect(answers[0]?.usage).toBeNull();
+  });
+
+  it("AC-20: bad usage values are reported as no data and the command still works", async () => {
+    const { answers, interpret } = observed(() =>
+      withUsage({
+        prompt_tokens: -5,
+        completion_tokens: "x",
+        total_tokens: null,
+      }),
+    );
+
+    expect(await interpret()).toEqual({
+      kind: "output",
+      output: OUTPUT.output,
+    });
+    expect(answers[0]?.usage).toBeNull();
+  });
+
+  it("AC-20: a throwing observer does not change the result", async () => {
+    const { interpret } = observed(
+      () => withUsage({ total_tokens: 5 }),
+      () => {
+        throw new Error("recorder down");
+      },
+    );
+
+    expect(await interpret()).toEqual({
+      kind: "output",
+      output: OUTPUT.output,
+    });
+  });
+
+  it("FR-14: reports numbers only, never the key, text or output", async () => {
+    const { answers, interpret } = observed(() =>
+      withUsage({ prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 }),
+    );
+
+    await interpret();
+
+    const reported = JSON.stringify(answers);
+    expect(reported).not.toContain(API_KEY);
+    expect(reported).not.toContain("Brno");
+    expect(reported).not.toContain("unsupported");
   });
 });

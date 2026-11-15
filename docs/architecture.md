@@ -30,9 +30,9 @@ src/app/         routes, layouts, global styles ([locale] segment)
 src/components/  React components, one folder per feature (map, language-switch, command-input,
                  history = store, storage and History tab, side-panel = tabbed panel) with their hooks and tests
 src/map/         MapEngine interface, MapLibre implementation, map config
-src/app/api/     Route Handler for the command endpoint (wiring only)
-src/server/      server-only code: command pipeline, ai, geocoding, state, config
-src/shared/      contracts shared by browser and server (action registry, schemas, text rules)
+src/app/api/     Route Handlers for the command and metrics endpoints (wiring only)
+src/server/      server-only code: command pipeline, ai, geocoding, state, metrics, config
+src/shared/      contracts shared by browser and server (action registry, schemas, text rules, time formatters)
 src/config/      app-wide constants (e.g. APP_NAME)
 src/i18n/        routing, request config, typed messages, client LocaleProvider, helpers
 src/proxy.ts     next-intl locale interceptor (Next 16 "proxy")
@@ -99,5 +99,11 @@ Other server env: `CLIENT_IP_HEADER`, `APP_ORIGIN`, `STATE_DIR`, `DAILY_CAP` (se
   validation, Base UI Dialog + Tabs (full screen below 768 px, beside a narrowed map from
   768 px), re-run through the same `moveMap` without server calls; no server change –
   [design 008](design/008-sidebar-history.md)
+- Metrics tab (AI): `GroqClient` reports every answer to an observer (return type unchanged);
+  day's tokens persisted in the state file next to the cap counter, last request and limit
+  figures volatile in memory; `GET /api/metrics` (same-origin, read-only, lock-free
+  `StateStore.read`) polled by the browser while the tab is visible; bars are Base UI `Meter`,
+  no chart library; payload grouped by source (`ai`) for phase 2 –
+  [design 009](design/009-sidebar-metrics-ai.md)
 - Tailwind CSS added at the user's request (supersedes "no Tailwind" in design 001); shared
   class sets live in `src/components/sharedConstants.ts`

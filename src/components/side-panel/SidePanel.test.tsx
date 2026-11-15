@@ -155,14 +155,44 @@ describe("opening and closing", () => {
     expect(slot.contains(openControl())).toBe(true);
   });
 
-  it("AC-17: tabs come from the tab list, with an accessible tab list name", async () => {
+  it("AC-1, AC-17, AC-25: History is followed by Metrics, with an accessible tab list name", async () => {
     setup();
     const dialog = await open();
 
     expect(
       within(dialog).getByRole("tablist", { name: "Panel sections" }),
     ).toBeDefined();
-    expect(within(dialog).getAllByRole("tab")).toHaveLength(1);
+    expect(
+      within(dialog)
+        .getAllByRole("tab")
+        .map((tab) => tab.textContent),
+    ).toEqual(["History", "Metrics"]);
+  });
+});
+
+describe("remembered tab", () => {
+  it("the selected tab stays selected after the panel is closed and opened again", async () => {
+    vi.stubGlobal("fetch", () => new Promise(() => {}));
+    setup();
+    const dialog = await open();
+
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Metrics" }));
+    expect(
+      within(dialog).getByRole("tab", { name: "Metrics", selected: true }),
+    ).toBeDefined();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Close side panel" }),
+    );
+    await waitFor(() => expect(panel()).toBeNull());
+
+    const reopened = await open();
+
+    expect(
+      within(reopened).getByRole("tab", { name: "Metrics", selected: true }),
+    ).toBeDefined();
+    expect(
+      within(reopened).getByRole("tab", { name: "History", selected: false }),
+    ).toBeDefined();
   });
 });
 

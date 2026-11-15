@@ -41,11 +41,50 @@
     "close": "Zavřít boční panel",
     "tabsLabel": "Sekce panelu",
     "tabs": {
-      "history": "Historie"
+      "history": "Historie",
+      "metrics": "Metriky"
     },
     "history": {
       "listLabel": "Historie příkazů",
       "empty": "Zatím žádné příkazy. Úspěšné příkazy se zobrazí zde."
+    },
+    "metrics": {
+      "ai": {
+        "title": "AI"
+      },
+      "loading": "Načítám údaje…",
+      "loadFailed": "Údaje se nepodařilo načíst. Zkouším to znovu.",
+      "outdated": "Údaje se nepodařilo aktualizovat a mohou být neaktuální. Zkouším to znovu.",
+      "empty": "Údaje o AI se zobrazí po prvním příkazu.",
+      "noData": "bez dat",
+      "model": {
+        "line": "<label>Model:</label> {model}"
+      },
+      "cap": {
+        "title": "AI požadavky",
+        "value": "{used} / {cap}",
+        "ariaValueText": "využito {used} z {cap} požadavků",
+        "resets": "Obnovení za {time}"
+      },
+      "tokensToday": {
+        "title": "Spotřeba tokenů dnes (všichni uživatelé)"
+      },
+      "lastRequest": {
+        "title": "Poslední požadavek (tokeny)",
+        "prompt": "Vstup",
+        "completion": "Odpověď",
+        "total": "Celkem"
+      },
+      "limits": {
+        "requests": "Požadavky za den (Groq)",
+        "tokens": "Tokeny za minutu",
+        "value": "{remaining} / {limit}",
+        "ariaValueText": "zbývá {remaining} z {limit}",
+        "remainingOnly": "zbývá {remaining}",
+        "resets": "Obnoví se za {time}",
+        "resetUnknown": "Čas obnovení: neznámý",
+        "renewed": "Obnoveno. Údaj je neaktuální do dalšího příkazu."
+      }
     }
   }
 }

@@ -9,10 +9,11 @@ Early development. Current features:
 
 - Full-screen world map that opens on the Czech Republic (MapLibre GL JS, OpenFreeMap vector tiles) with pan,
   zoom and zoom buttons; the collapsible attribution sits in the top-left corner
-- Localised message when the map cannot be loaded
-- Czech (`/cs`) and English (`/en`) versions; `/` redirects by browser language (fallback Czech)
-- CZ/EN language switch below the zoom buttons (same button size); switching changes all texts and the address
-  without reloading the map
+- The application is localised into two languages, Czech and English:
+  - Czech (`/cs`) and English (`/en`) versions; `/` redirects by browser language (fallback Czech)
+  - CZ/EN language switch below the zoom buttons (same button size); switching changes all texts and the
+    address without reloading the map
+  - Localised message when the map cannot be loaded
 - Command input at the bottom edge of the map with rotating example hints. Zoom commands work:
   Czech or English text is interpreted by AI (Groq) and the place is looked up with a geocoder
   (Nominatim), anywhere in the world. Towns, regions and natural features can be searched, and so can
@@ -24,11 +25,19 @@ Early development. Current features:
 - Server-side protection of the free services: input validation, a 10 s pause after each processed
   command (also an unsuccessful one), 10 commands per minute per IP address and a daily cap on AI calls; messages are shown in
   the current language and switch with it
-- Side panel with the history of your successful commands (control below the language switch; tabbed,
-  only "History" for now). Clicking an entry moves the map there again and shows the highlight without
-  any request to the AI or the geocoder. Full screen on phones (closes after picking an entry), beside
-  a narrowed map from 768 px width. The history (up to 50 entries) stays in session storage of the
-  browser tab, so it survives a reload and ends with the tab; it is never sent to the server.
+- Side panel (control below the language switch) with two tabs, "History" and "Metrics". Full screen on
+  phones (closes after picking a history entry), beside a narrowed map from 768 px width.
+  - **History:** your successful commands (up to 50 entries). Clicking an entry moves the map there again and
+    shows the highlight without any request to the AI or the geocoder. The history stays in session storage
+    of the browser tab, so it survives a reload and ends with the tab; it is never sent to the server.
+  - **Metrics:** how much of the free Groq quota the app uses. It shows the app's own daily cap of AI calls
+    with the time to the next UTC day, the tokens of the last AI request (input, output, total), the
+    remaining requests (per day) and tokens (per minute) with live countdowns to their renewal, the day's
+    token total (UTC day, all users) and the model in use. The figures come from the answers to normal
+    commands (no extra Groq calls), refresh every 10 s while the tab is visible, and are shared by all
+    visitors; only numbers are stored, never command text. After a server restart the last request and the
+    limits are unknown until the next command; the day's total and the cap counter are kept in the state
+    file. They are served by a read-only, same-origin `GET /api/metrics`.
 - Short colour transitions on the input focus border and the CZ/EN selection;
   disabled with the system "reduced motion" setting
 
@@ -80,12 +89,12 @@ npm start          # run the production build
 
 ```
 src/app/         routes, layouts, global styles ([locale] segment)
-src/app/api/     Route Handler of the command endpoint (wiring only)
+src/app/api/     Route Handlers of the command and metrics endpoints (wiring only)
 src/components/  React components, one folder per feature (map, language-switch, command-input,
-                 history = store, storage and History tab, side-panel = tabbed panel)
+                 history = store, storage and History tab, metrics = Metrics tab, side-panel = tabbed panel)
 src/map/         map engine interface, MapLibre implementation (incl. highlight layers), map config
-src/server/      server-only code: command pipeline, AI client, geocoder, limits state, env config
-src/shared/      contracts shared by browser and server (action list, schemas, text rules)
+src/server/      server-only code: command pipeline, AI client, geocoder, limits state, metrics, env config
+src/shared/      contracts shared by browser and server (action list, schemas, text rules, metrics contract)
 src/config/      app-wide constants
 src/i18n/        routing, request config, typed messages, client locale provider
 src/proxy.ts     locale redirect (next-intl)

@@ -3,6 +3,7 @@
 import { Drawer } from "@base-ui/react/drawer";
 import { Tabs } from "@base-ui/react/tabs";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import {
   LARGE_SCREEN_QUERY,
@@ -36,6 +37,8 @@ export function SidePanel({
 }: SidePanelProps) {
   const t = useTranslations("panel");
   const large = useMediaQuery(LARGE_SCREEN_QUERY);
+  // Kept here, not in the tabs: the popup unmounts when the panel closes, this component does not.
+  const [activeTab, setActiveTab] = useState(PANEL_TABS[0]?.id);
 
   return (
     <Drawer.Root
@@ -78,6 +81,8 @@ export function SidePanel({
             className={`pointer-events-auto fixed top-0 right-0 z-10 flex h-dvh w-dvw ${SIDE_PANEL_WIDTH_CLASS_NAME} translate-x-(--drawer-swipe-movement-x,0px) flex-col bg-white text-neutral-900 shadow-xl ring-1 ring-neutral-500 transition-transform duration-300 data-swiping:transition-none data-ending-style:translate-x-full data-starting-style:translate-x-full ${TRANSITION_CLASS_NAME}`}
           >
             <PanelTabs
+              activeTab={activeTab}
+              onActiveTabChange={setActiveTab}
               showResult={showResult}
               onActivated={() => {
                 if (!large) onOpenChange(false);
@@ -90,12 +95,22 @@ export function SidePanel({
   );
 }
 
-function PanelTabs(props: PanelTabContentProps) {
+interface PanelTabsProps extends PanelTabContentProps {
+  activeTab: string | undefined;
+  onActiveTabChange(id: string | undefined): void;
+}
+
+function PanelTabs({
+  activeTab,
+  onActiveTabChange,
+  ...contentProps
+}: PanelTabsProps) {
   const t = useTranslations("panel");
 
   return (
     <Tabs.Root
-      defaultValue={PANEL_TABS[0]?.id}
+      value={activeTab}
+      onValueChange={(value) => onActiveTabChange(String(value))}
       className="flex min-h-0 flex-1 flex-col"
     >
       <div className="flex items-stretch justify-between border-b border-neutral-300">
@@ -133,7 +148,7 @@ function PanelTabs(props: PanelTabContentProps) {
           value={tab.id}
           className="min-h-0 flex-1 overflow-y-auto"
         >
-          <tab.Content {...props} />
+          <tab.Content {...contentProps} />
         </Tabs.Panel>
       ))}
     </Tabs.Root>

@@ -4,6 +4,13 @@ import {
   MODEL_OUTPUT_JSON_SCHEMA,
   modelResponseSchema,
 } from "@/shared/actions";
+import { type Clock, systemClock } from "../state/types";
+import {
+  type AiAnswer,
+  type AiObserver,
+  parseLimits,
+  parseUsage,
+} from "./aiAnswer";
 import { SYSTEM_PROMPT, userMessage } from "./prompt";
 import { type AiClient, AiError, type AiResult } from "./types";
 
@@ -27,6 +34,9 @@ export interface GroqClientOptions {
   apiKey: string;
   model: string;
   fetch?: typeof fetch;
+  /** Told about every HTTP answer; a failing observer never affects the result. */
+  observe?: AiObserver;
+  clock?: Clock;
 }
 
 export class GroqClient implements AiClient {
@@ -47,15 +57,33 @@ export class GroqClient implements AiClient {
       body: JSON.stringify(this.requestBody(input)),
     });
 
+    const receivedAt = (this.options.clock ?? systemClock).now();
+    const limits = parseLimits(response.headers, receivedAt);
+
     if (response.status === 429) {
+      this.report({ receivedAt, usage: null, limits });
       return {
         kind: "quota_exhausted",
         retryAfterSeconds: parseRetryAfter(response.headers.get("retry-after")),
       };
     }
-    if (!response.ok) throw new AiError(`Groq answered ${response.status}`);
+    if (!response.ok) {
+      this.report({ receivedAt, usage: null, limits });
+      throw new AiError(`Groq answered ${response.status}`);
+    }
 
-    return { kind: "output", output: await readOutput(response) };
+    const body = await readJson(response);
+    // Reported before the output is validated: a rejected output still used quota.
+    this.report({ receivedAt, usage: parseUsage(body), limits });
+    return { kind: "output", output: readOutput(body) };
+  }
+
+  private report(answer: AiAnswer) {
+    try {
+      this.options.observe?.(answer);
+    } catch {
+      // Collecting metrics must never change the outcome of a command.
+    }
   }
 
   private requestBody({ text, locale }: Parameters<AiClient["interpret"]>[0]) {
@@ -89,9 +117,18 @@ function parseRetryAfter(header: string | null): number | undefined {
     : undefined;
 }
 
-async function readOutput(response: Response) {
-  const body = v.safeParse(completionSchema, await response.json());
-  const choice = body.success ? body.output.choices[0] : undefined;
+/** A body that is not JSON is treated as an empty one; reading the output then fails. */
+async function readJson(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    return undefined;
+  }
+}
+
+function readOutput(body: unknown) {
+  const completion = v.safeParse(completionSchema, body);
+  const choice = completion.success ? completion.output.choices[0] : undefined;
   if (choice?.finish_reason !== "stop" || !choice.message.content) {
     throw new AiError("Groq answer is incomplete");
   }

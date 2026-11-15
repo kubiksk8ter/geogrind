@@ -65,10 +65,29 @@ export function pruneState(state: StateData, now: number): StateData {
   const { aiBlockedUntil } = state;
   return {
     version: 1,
-    daily: state.daily.day === today ? state.daily : { day: today, count: 0 },
+    daily:
+      state.daily.day === today
+        ? state.daily
+        : { day: today, count: 0, tokens: 0 },
     ...(aiBlockedUntil !== undefined &&
       aiBlockedUntil > now && { aiBlockedUntil }),
     clients,
+  };
+}
+
+/** Adds the tokens of one answer to the total of the current UTC day. */
+export function addTokens(
+  state: StateData,
+  tokens: number,
+  now: number,
+): Transition<void> {
+  const pruned = pruneState(state, now);
+  return {
+    next: {
+      ...pruned,
+      daily: { ...pruned.daily, tokens: pruned.daily.tokens + tokens },
+    },
+    result: undefined,
   };
 }
 
