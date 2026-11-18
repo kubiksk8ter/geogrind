@@ -1,7 +1,12 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { CreateMapEngine, MapEngine, MapTarget } from "@/map";
+import type {
+  CreateMapEngine,
+  MapAvailability,
+  MapEngine,
+  MapTarget,
+} from "@/map";
 import { CommandInput } from "../command-input/CommandInput";
 import { useHistoryStore } from "../history/HistoryStoreProvider";
 import { LanguageSwitch } from "../language-switch/LanguageSwitch";
@@ -11,12 +16,14 @@ import {
 } from "../sharedConstants";
 import { SidePanel } from "../side-panel/SidePanel";
 import { MapFailure } from "./MapFailure";
+import { MapAvailabilityContext } from "./mapAvailability";
 
 export function MapView({ createEngine }: { createEngine: CreateMapEngine }) {
   const t = useTranslations("map");
   const containerRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
   const [engine, setEngine] = useState<MapEngine | null>(null);
+  const [availability, setAvailability] = useState<MapAvailability>("unknown");
   const [panelOpen, setPanelOpen] = useState(false);
   const addEntry = useHistoryStore((state) => state.addEntry);
   const setCommandInFlight = useHistoryStore(
@@ -30,10 +37,13 @@ export function MapView({ createEngine }: { createEngine: CreateMapEngine }) {
     const created = createEngine({
       container,
       onFailure: () => setFailed(true),
+      onAvailabilityChange: setAvailability,
     });
     setEngine(created);
     return () => {
       setEngine(null);
+      // A new engine starts without knowing whether tiles load.
+      setAvailability("unknown");
       created.destroy();
     };
   }, [createEngine, failed]);
@@ -66,12 +76,14 @@ export function MapView({ createEngine }: { createEngine: CreateMapEngine }) {
         onRequestRunningChangeAction={setCommandInFlight}
       />
       {engine && createPortal(<LanguageSwitch />, engine.controlsSlot)}
-      <SidePanel
-        open={panelOpen}
-        onOpenChange={setPanelOpen}
-        controlSlot={engine?.controlsSlot ?? null}
-        showResult={engine ? moveMap : null}
-      />
+      <MapAvailabilityContext value={availability}>
+        <SidePanel
+          open={panelOpen}
+          onOpenChange={setPanelOpen}
+          controlSlot={engine?.controlsSlot ?? null}
+          showResult={engine ? moveMap : null}
+        />
+      </MapAvailabilityContext>
     </section>
   );
 }

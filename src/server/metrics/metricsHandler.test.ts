@@ -1,12 +1,15 @@
 import * as v from "valibot";
 import { describe, expect, it, vi } from "vitest";
-import { metricsResponseSchema } from "@/shared/metricsContract";
+import { metricsResponseSchema, noResults } from "@/shared/metricsContract";
 import { FakeClock } from "@/test/fakeClock";
 import { MemoryStateStore } from "@/test/memoryStateStore";
 import type { AiAnswer } from "../ai/aiAnswer";
 import { type AppEnv, ConfigError } from "../config/env";
+import { CommandLimits } from "../state/limits";
 import { StateUnavailableError } from "../state/types";
-import { InMemoryAiFigures } from "./aiFigures";
+import { InMemoryAiFigures } from "./ai/aiFigures";
+import { CommandWindow } from "./app/commandWindow";
+import { InMemoryServiceStatus } from "./app/serviceStatus";
 import { createMetricsHandler } from "./metricsHandler";
 
 const ORIGIN = "https://geogrind.example";
@@ -27,11 +30,19 @@ function setup() {
   const clock = new FakeClock(Date.UTC(2026, 10, 13, 12));
   const store = new MemoryStateStore();
   const figures = new InMemoryAiFigures();
+  const commandWindow = new CommandWindow({ clock });
+  const nominatim = new InMemoryServiceStatus();
   const log = vi.fn();
   const state = { loadEnv: () => ENV };
   const handle = createMetricsHandler({
     loadEnv: () => state.loadEnv(),
-    createServices: () => ({ store, figures, clock }),
+    createServices: () => ({
+      store,
+      figures,
+      commandWindow,
+      nominatim,
+      clock,
+    }),
     log,
   });
   const send = (headers: Record<string, string>, method = "GET") =>
@@ -40,7 +51,17 @@ function setup() {
     );
   const get = (headers: Record<string, string> = {}, method = "GET") =>
     send({ "sec-fetch-site": "same-origin", ...headers }, method);
-  return { clock, store, figures, log, state, get, send };
+  return {
+    clock,
+    store,
+    figures,
+    commandWindow,
+    nominatim,
+    log,
+    state,
+    get,
+    send,
+  };
 }
 
 const body = async (response: Response) => await response.json();
@@ -72,7 +93,12 @@ describe("GET /api/metrics", () => {
     await store.transact((state) => ({
       next: {
         ...state,
-        daily: { day: "2026-11-13", count: 500, tokens: 270 },
+        daily: {
+          day: "2026-11-13",
+          count: 500,
+          tokens: 270,
+          results: noResults(),
+        },
       },
       result: undefined,
     }));
@@ -87,7 +113,15 @@ describe("GET /api/metrics", () => {
   it("AC-9, AC-4: after UTC midnight the counters read 0 without a write", async () => {
     const { get, store, clock } = setup();
     await store.transact((state) => ({
-      next: { ...state, daily: { day: "2026-11-13", count: 37, tokens: 270 } },
+      next: {
+        ...state,
+        daily: {
+          day: "2026-11-13",
+          count: 37,
+          tokens: 270,
+          results: { ...noResults(), success: 37 },
+        },
+      },
       result: undefined,
     }));
     const before = store.snapshot();
@@ -97,6 +131,7 @@ describe("GET /api/metrics", () => {
 
     expect(parsed.metrics.ai.dailyCap.used).toBe(0);
     expect(parsed.metrics.ai.dailyTokens).toBe(0);
+    expect(parsed.metrics.app.results).toEqual(noResults());
     expect(store.snapshot()).toBe(before);
   });
 
@@ -225,5 +260,131 @@ describe("GET /api/metrics", () => {
     };
 
     expect((await get()).status).toBe(500);
+  });
+});
+
+describe("GET /api/metrics, application group", () => {
+  it("AC-12: a fresh start has no results, unknown hour figures, 0 in progress and unknown Nominatim", async () => {
+    const { get, clock } = setup();
+
+    const parsed = v.parse(metricsResponseSchema, await body(await get()));
+
+    expect(parsed.ok && parsed.metrics.app).toEqual({
+      results: noResults(),
+      window: {
+        startedAt: clock.now(),
+        durationMs: 3_600_000,
+        bucketMs: 300_000,
+      },
+      load: {
+        lastMinute: 0,
+        lastHour: null,
+        activeClients: null,
+        inProgress: 0,
+      },
+      latency: null,
+      services: { nominatim: null },
+    });
+  });
+
+  it("AC-2: shows today's results from the state file", async () => {
+    const { get, store } = setup();
+    await store.transact((state) => ({
+      next: {
+        ...state,
+        daily: {
+          day: "2026-11-13",
+          count: 7,
+          tokens: 0,
+          results: { ...noResults(), success: 6, error: 1 },
+        },
+      },
+      result: undefined,
+    }));
+
+    const { metrics } = await body(await get());
+
+    expect(metrics.app.results).toEqual({
+      ...noResults(),
+      success: 6,
+      error: 1,
+    });
+  });
+
+  it("AC-6: one command in progress shows 1 and returns to 0 when it ends", async () => {
+    const { get, store, clock } = setup();
+    const limits = new CommandLimits(store, clock, ENV.dailyCap);
+    await limits.recordHit("203.0.113.7");
+    await limits.admit("203.0.113.7");
+
+    expect((await body(await get())).metrics.app.load.inProgress).toBe(1);
+
+    await limits.complete("203.0.113.7");
+
+    expect((await body(await get())).metrics.app.load.inProgress).toBe(0);
+  });
+
+  it("AC-6, AC-10: carries the window figures and the Nominatim state from memory", async () => {
+    const { get, commandWindow, nominatim } = setup();
+    commandWindow.record({
+      result: "success",
+      durationMs: 640,
+      clientId: "203.0.113.7",
+    });
+    nominatim.report(false);
+
+    const { metrics } = await body(await get());
+
+    expect(metrics.app.load).toMatchObject({
+      lastMinute: 1,
+      lastHour: 1,
+      activeClients: 1,
+    });
+    expect(metrics.app.latency).toMatchObject({ count: 1, medianMs: 640 });
+    expect(metrics.app.services).toEqual({ nominatim: false });
+  });
+
+  it("AC-14: repeated reads change no figure and record nothing", async () => {
+    const { get, store, commandWindow, nominatim } = setup();
+    const record = vi.spyOn(commandWindow, "record");
+    const report = vi.spyOn(nominatim, "report");
+    const transact = vi.spyOn(store, "transact");
+
+    const first = await body(await get());
+    const second = await body(await get());
+
+    expect(second).toEqual(first);
+    expect(first.metrics.app.load).toMatchObject({
+      lastHour: null,
+      activeClients: null,
+      inProgress: 0,
+    });
+    expect(record).not.toHaveBeenCalled();
+    expect(report).not.toHaveBeenCalled();
+    expect(transact).not.toHaveBeenCalled();
+  });
+
+  it("AC-7: no client address appears in the answer", async () => {
+    const { get, commandWindow, store, clock } = setup();
+    commandWindow.record({
+      result: "success",
+      durationMs: 1,
+      clientId: "203.0.113.7",
+    });
+    await new CommandLimits(store, clock, ENV.dailyCap).admit("198.51.100.4");
+
+    const text = JSON.stringify(await body(await get()));
+
+    expect(text).not.toContain("203.0.113.7");
+    expect(text).not.toContain("198.51.100.4");
+  });
+
+  it("AC-15: a foreign origin gets no figures of the group", async () => {
+    const { send } = setup();
+
+    const response = await send({ "sec-fetch-site": "cross-site" });
+
+    expect(response.status).toBe(403);
+    expect(JSON.stringify(await body(response))).not.toContain("app");
   });
 });

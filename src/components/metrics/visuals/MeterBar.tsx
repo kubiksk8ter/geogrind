@@ -1,5 +1,5 @@
 import { Meter } from "@base-ui/react/meter";
-import { TRANSITION_CLASS_NAME } from "../sharedConstants";
+import { TRANSITION_CLASS_NAME } from "../../sharedConstants";
 
 export interface MeterBarProps {
   label: string;

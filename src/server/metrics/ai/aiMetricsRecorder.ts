@@ -1,6 +1,6 @@
-import type { AiAnswer } from "../ai/aiAnswer";
-import { addTokens } from "../state/rules";
-import type { Clock, StateStore } from "../state/types";
+import type { AiAnswer } from "../../ai/aiAnswer";
+import { addTokens } from "../../state/rules";
+import type { Clock, StateStore } from "../../state/types";
 import type { AiFigures } from "./aiFigures";
 
 export interface AiMetricsRecorder {

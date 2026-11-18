@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { FakeClock } from "@/test/fakeClock";
 import { MemoryStateStore } from "@/test/memoryStateStore";
-import type { AiAnswer } from "../ai/aiAnswer";
-import { StateUnavailableError } from "../state/types";
+import type { AiAnswer } from "../../ai/aiAnswer";
+import { StateUnavailableError } from "../../state/types";
 import { InMemoryAiFigures } from "./aiFigures";
 import { createAiMetricsRecorder } from "./aiMetricsRecorder";
 

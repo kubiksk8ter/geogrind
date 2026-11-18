@@ -105,5 +105,10 @@ Other server env: `CLIENT_IP_HEADER`, `APP_ORIGIN`, `STATE_DIR`, `DAILY_CAP` (se
   `StateStore.read`) polled by the browser while the tab is visible; bars are Base UI `Meter`,
   no chart library; payload grouped by source (`ai`) for phase 2 –
   [design 009](design/009-sidebar-metrics-ai.md)
+- Metrics tab (Application): one measurement per command from the command handler; hour window
+  in a bounded in-memory ring buffer, today's result counts in the state file; Nominatim status
+  from the geocoder's HTTP attempts; map status computed in the browser from tile events
+  (React context); sibling group `app`; hand-written SVG charts –
+  [design 010](design/010-sidebar-metrics-app.md)
 - Tailwind CSS added at the user's request (supersedes "no Tailwind" in design 001); shared
   class sets live in `src/components/sharedConstants.ts`

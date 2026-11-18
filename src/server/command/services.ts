@@ -3,8 +3,9 @@ import { GroqClient } from "../ai/groqClient";
 import type { AppEnv } from "../config/env";
 import { NominatimGeocoder } from "../geocoding/nominatimGeocoder";
 import { abortableSleep } from "../geocoding/requestSpacer";
-import { sharedAiFigures } from "../metrics/aiFigures";
-import { createAiMetricsRecorder } from "../metrics/aiMetricsRecorder";
+import { sharedAiFigures } from "../metrics/ai/aiFigures";
+import { createAiMetricsRecorder } from "../metrics/ai/aiMetricsRecorder";
+import { sharedNominatimStatus } from "../metrics/app/serviceStatus";
 import { createStateStore } from "../state/createStateStore";
 import { CommandLimits } from "../state/limits";
 import { systemClock } from "../state/types";
@@ -23,6 +24,7 @@ function sharedGeocoder({ geocoderUrl, geocoderContact }: AppEnv) {
         contact: geocoderContact,
         clock: systemClock,
         sleep: abortableSleep,
+        observe: (available) => sharedNominatimStatus().report(available),
       }),
     };
   }

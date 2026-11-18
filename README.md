@@ -30,14 +30,23 @@ Early development. Current features:
   - **History:** your successful commands (up to 50 entries). Clicking an entry moves the map there again and
     shows the highlight without any request to the AI or the geocoder. The history stays in session storage
     of the browser tab, so it survives a reload and ends with the tab; it is never sent to the server.
-  - **Metrics:** how much of the free Groq quota the app uses. It shows the app's own daily cap of AI calls
-    with the time to the next UTC day, the tokens of the last AI request (input, output, total), the
-    remaining requests (per day) and tokens (per minute) with live countdowns to their renewal, the day's
-    token total (UTC day, all users) and the model in use. The figures come from the answers to normal
-    commands (no extra Groq calls), refresh every 10 s while the tab is visible, and are shared by all
-    visitors; only numbers are stored, never command text. After a server restart the last request and the
-    limits are unknown until the next command; the day's total and the cap counter are kept in the state
-    file. They are served by a read-only, same-origin `GET /api/metrics`.
+  - **Metrics:** two groups of figures, refreshed every 10 s while the tab is visible and shared by all
+    visitors; only numbers are stored, never command text, place names or IP addresses. They are served by
+    a read-only, same-origin `GET /api/metrics` and come from normal commands (no extra calls to Groq or
+    Nominatim).
+    - *AI:* how much of the free Groq quota the app uses: the app's own daily cap of AI calls with the time
+      to the next UTC day, the tokens of the last AI request (input, output, total), the remaining requests
+      (per day) and tokens (per minute) with live countdowns to their renewal, the day's token total (UTC
+      day, all users) and the model in use.
+    - *Application:* a pie chart of today's command results (successful, unsupported, not found, too early,
+      too many commands, AI resting, error) with a legend of counts and percentages; median and 95th
+      percentile processing time of the last hour with a sparkline; the load (commands in the last minute
+      and hour, active clients, commands in progress); and a status light for the map (from this browser's
+      tile loading) and for Nominatim (from the server's last geocoder call). Charts are hand-drawn SVG
+      with text equivalents (the pie also has a legend with names and counts).
+    - After a server restart the last AI request, the limits, the hour window and the Nominatim status are
+      unknown until the next command (hour figures say "since start" during the first hour); the day's
+      token total, cap counter and command results are kept in the state file.
 - Short colour transitions on the input focus border and the CZ/EN selection;
   disabled with the system "reduced motion" setting
 
@@ -64,7 +73,7 @@ Configuration is read from environment variables on the server. Copy `.env.examp
   (e.g. `x-real-ip`); required in production, see below.
 - `APP_ORIGIN` – allowed `Origin` values, comma separated; default `http://localhost:3000`,
   required in production.
-- `STATE_DIR` – optional folder for the limits state, default `.data/` (git-ignored).
+- `STATE_DIR` – optional folder for the limits and daily metrics state, default `.data/` (git-ignored).
 - `DAILY_CAP` – optional daily cap of AI calls for all users, default 500.
 
 `GROQ_API_KEY` is required everywhere, in development and in production, and is read only on
@@ -92,7 +101,7 @@ src/app/         routes, layouts, global styles ([locale] segment)
 src/app/api/     Route Handlers of the command and metrics endpoints (wiring only)
 src/components/  React components, one folder per feature (map, language-switch, command-input,
                  history = store, storage and History tab, metrics = Metrics tab, side-panel = tabbed panel)
-src/map/         map engine interface, MapLibre implementation (incl. highlight layers), map config
+src/map/         map engine interface, MapLibre implementation (incl. highlight layers, tile availability), map config
 src/server/      server-only code: command pipeline, AI client, geocoder, limits state, metrics, env config
 src/shared/      contracts shared by browser and server (action list, schemas, text rules, metrics contract)
 src/config/      app-wide constants

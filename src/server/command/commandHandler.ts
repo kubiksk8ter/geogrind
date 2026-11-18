@@ -4,9 +4,11 @@ import {
   type CommandRequest,
   commandRequestSchema,
 } from "@/shared/commandContract";
+import type { ResultKey } from "@/shared/metricsContract";
 import type { AiClient } from "../ai/types";
 import type { AppEnv } from "../config/env";
 import type { Geocoder } from "../geocoding/types";
+import type { CommandMeasurementRecorder } from "../metrics/app/commandMeasurement";
 import type { CommandLimits } from "../state/limits";
 import { runAction } from "./actionHandlers";
 import { resolveClientId } from "./clientIp";
@@ -31,6 +33,21 @@ export interface CommandHandlerDeps {
   createRequestSignal(): AbortSignal;
   /** Receives the result code and duration only; never request content. */
   log(entry: { code: string; durationMs: number; cause?: string }): void;
+  /** Told once per processed command (not for `invalid_request`); never throws. */
+  measurement: CommandMeasurementRecorder;
+}
+
+/** What `process` learnt on the way, for the log line and the measurement. */
+interface Report {
+  cause?: string;
+  clientId?: string;
+}
+
+/** `invalid_request` was rejected before processing, so it is not measured. */
+function measuredResult(pending: PendingResponse): ResultKey | null {
+  if (pending.body.ok) return "success";
+  const { code } = pending.body.error;
+  return code === "invalid_request" ? null : code;
 }
 
 /** Names the failure for the log; the message is never logged because it could hold content. */
@@ -48,7 +65,7 @@ class MissingClientAddressError extends Error {
 export function createCommandHandler(deps: CommandHandlerDeps) {
   async function process(
     request: Request,
-    report: { cause?: string },
+    report: Report,
   ): Promise<PendingResponse> {
     const env = deps.loadEnv();
 
@@ -57,6 +74,7 @@ export function createCommandHandler(deps: CommandHandlerDeps) {
 
     const clientId = resolveClientId(request.headers, env.clientIpHeader);
     if (!clientId) throw new MissingClientAddressError();
+    report.clientId = clientId;
 
     const services = deps.createServices(env);
     const hit = await services.limits.recordHit(clientId);
@@ -135,7 +153,7 @@ export function createCommandHandler(deps: CommandHandlerDeps) {
 
   return async function handle(request: Request): Promise<Response> {
     const started = performance.now();
-    const report: { cause?: string } = {};
+    const report: Report = {};
     let pending: PendingResponse;
     try {
       pending = await process(request, report);
@@ -143,14 +161,30 @@ export function createCommandHandler(deps: CommandHandlerDeps) {
       report.cause = causeOf(error);
       pending = failure("error");
     }
-    const { cause } = report;
+    const { cause, clientId } = report;
+    const durationMs = Math.round(performance.now() - started);
     deps.log({
       code: responseCode(pending),
-      durationMs: Math.round(performance.now() - started),
+      durationMs,
       ...(cause !== undefined && { cause }),
     });
+    reportMeasurement(pending, durationMs, clientId ?? null);
     return toResponse(pending);
   };
+
+  function reportMeasurement(
+    pending: PendingResponse,
+    durationMs: number,
+    clientId: string | null,
+  ) {
+    const result = measuredResult(pending);
+    if (result === null) return;
+    try {
+      deps.measurement({ result, durationMs, clientId });
+    } catch {
+      // Collecting metrics must never change the answer to a command.
+    }
+  }
 }
 
 function parseRequest(body: string) {

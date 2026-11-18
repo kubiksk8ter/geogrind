@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { noResults } from "@/shared/metricsContract";
 import { addTokens, pruneState } from "./rules";
 import { EMPTY_STATE, type StateData } from "./types";
 
@@ -12,7 +13,12 @@ describe("addTokens", () => {
   it("AC-4: sums the totals of one UTC day", () => {
     const state = apply(apply(EMPTY_STATE, 150, DAY_ONE), 120, DAY_ONE + 1000);
 
-    expect(state.daily).toEqual({ day: "2026-11-09", count: 0, tokens: 270 });
+    expect(state.daily).toEqual({
+      day: "2026-11-09",
+      count: 0,
+      tokens: 270,
+      results: noResults(),
+    });
   });
 
   it("AC-4: starts again at 0 after UTC midnight", () => {
@@ -23,13 +29,19 @@ describe("addTokens", () => {
       day: "2026-11-10",
       count: 0,
       tokens: 40,
+      results: noResults(),
     });
   });
 
   it("resets tokens together with the cap counter and keeps both on the same day", () => {
     const state: StateData = {
       ...EMPTY_STATE,
-      daily: { day: "2026-11-09", count: 37, tokens: 270 },
+      daily: {
+        day: "2026-11-09",
+        count: 37,
+        tokens: 270,
+        results: noResults(),
+      },
     };
 
     expect(pruneState(state, DAY_ONE).daily).toEqual(state.daily);
@@ -37,6 +49,7 @@ describe("addTokens", () => {
       day: "2026-11-10",
       count: 0,
       tokens: 0,
+      results: noResults(),
     });
   });
 });

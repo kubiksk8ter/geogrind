@@ -1,10 +1,11 @@
 import { useTranslations } from "next-intl";
-import { type ReactNode, useId } from "react";
 import type { Locale } from "@/i18n/routing";
 import type { AiMetrics, LimitFigure } from "@/shared/metricsContract";
 import { formatClock, formatCountdown } from "@/shared/timeFormatters";
+import { formatCount } from "./formatNumbers";
 import { limitView, UNKNOWN_LIMIT } from "./limitView";
-import { MeterBar } from "./MeterBar";
+import { MetricsSection } from "./MetricsSection";
+import { MeterBar } from "./visuals/MeterBar";
 
 export interface AiMetricsViewProps {
   ai: AiMetrics;
@@ -18,13 +19,13 @@ export function AiMetricsView({ ai, now, locale }: AiMetricsViewProps) {
   const nothingKnown = ai.lastRequest === null && ai.limits === null;
 
   return (
-    <div className="flex flex-col gap-3 p-4 text-sm">
+    <div className="flex flex-col gap-3 p-4 pt-3 text-sm">
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-base font-semibold text-neutral-900">
           {t("ai.title")}
         </h2>
         <p className="min-w-0 break-all text-right text-[11px] text-neutral-700">
-          {t.rich("model.line", {
+          {t.rich("ai.model.line", {
             model: ai.model,
             label: (chunks) => (
               <span className="font-semibold text-neutral-900">{chunks}</span>
@@ -43,13 +44,13 @@ export function AiMetricsView({ ai, now, locale }: AiMetricsViewProps) {
       {!nothingKnown && (
         <>
           <LimitItem
-            label={t("limits.requests")}
+            label={t("ai.limits.requests")}
             figure={ai.limits?.requests ?? UNKNOWN_LIMIT}
             now={now}
             locale={locale}
           />
           <LimitItem
-            label={t("limits.tokens")}
+            label={t("ai.limits.tokens")}
             figure={ai.limits?.tokens ?? UNKNOWN_LIMIT}
             now={now}
             locale={locale}
@@ -57,30 +58,12 @@ export function AiMetricsView({ ai, now, locale }: AiMetricsViewProps) {
           <hr className="border-neutral-300" />
         </>
       )}
-      <Section title={t("tokensToday.title")}>
+      <MetricsSection title={t("ai.tokensToday.title")}>
         <p className="text-base font-semibold text-neutral-900">
           {formatCount(ai.dailyTokens, locale)}
         </p>
-      </Section>
-      {/* Full width: cancels the horizontal padding of the panel. */}
-      <hr className="-mx-4 border-neutral-300" />
+      </MetricsSection>
     </div>
-  );
-}
-
-function formatCount(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(locale).format(value);
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  const headingId = useId();
-  return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-2">
-      <h3 id={headingId} className="text-neutral-900">
-        {title}
-      </h3>
-      {children}
-    </section>
   );
 }
 
@@ -99,7 +82,7 @@ function LastRequest({
   ] as const;
 
   return (
-    <Section title={t("lastRequest.title")}>
+    <MetricsSection title={t("ai.lastRequest.title")}>
       <table className="w-full table-fixed text-neutral-900">
         <thead>
           <tr>
@@ -109,7 +92,7 @@ function LastRequest({
                 scope="col"
                 className="pb-1 text-left text-xs font-semibold text-neutral-700"
               >
-                {t(`lastRequest.${key}`)}
+                {t(`ai.lastRequest.${key}`)}
               </th>
             ))}
           </tr>
@@ -126,7 +109,7 @@ function LastRequest({
           </tr>
         </tbody>
       </table>
-    </Section>
+    </MetricsSection>
   );
 }
 
@@ -150,7 +133,7 @@ function LimitItem({
         <p className="text-neutral-900">{label}</p>
         {/* Appears once when the countdown ends, so it is announced once, not every second. */}
         <p role="status" className="text-xs text-neutral-700">
-          {t("limits.renewed")}
+          {t("ai.limits.renewed")}
         </p>
       </div>
     );
@@ -169,8 +152,10 @@ function LimitItem({
   });
   const resetText =
     view.resetInMs === null
-      ? t("limits.resetUnknown")
-      : t("limits.resets", { time: formatCountdown(view.resetInMs, locale) });
+      ? t("ai.limits.resetUnknown")
+      : t("ai.limits.resets", {
+          time: formatCountdown(view.resetInMs, locale),
+        });
 
   return (
     <div className="flex flex-col gap-1">
@@ -179,8 +164,8 @@ function LimitItem({
           label={label}
           value={bar.remaining}
           max={bar.limit}
-          display={t("limits.value", numbers(bar))}
-          ariaValueText={t("limits.ariaValueText", numbers(bar))}
+          display={t("ai.limits.value", numbers(bar))}
+          ariaValueText={t("ai.limits.ariaValueText", numbers(bar))}
         />
       ) : (
         <div className="flex items-baseline justify-between gap-2">
@@ -188,7 +173,7 @@ function LimitItem({
           <p className="font-semibold text-neutral-900">
             {remaining === null
               ? t("noData")
-              : t("limits.remainingOnly", {
+              : t("ai.limits.remainingOnly", {
                   remaining: formatCount(remaining, locale),
                 })}
           </p>
@@ -217,14 +202,14 @@ function DailyCap({
   return (
     <section className="flex flex-col gap-2">
       <MeterBar
-        label={t("cap.title")}
+        label={t("ai.cap.title")}
         value={cap.used}
         max={cap.cap}
-        display={t("cap.value", numbers)}
-        ariaValueText={t("cap.ariaValueText", numbers)}
+        display={t("ai.cap.value", numbers)}
+        ariaValueText={t("ai.cap.ariaValueText", numbers)}
       />
       <p className="text-xs text-neutral-700">
-        {t("cap.resets", { time: formatClock(cap.resetsAt - now) })}
+        {t("ai.cap.resets", { time: formatClock(cap.resetsAt - now) })}
       </p>
     </section>
   );

@@ -44,6 +44,27 @@ export function formatCountdown(milliseconds: number, locale: Locale): string {
 }
 
 /**
+ * A processing time as a short localised text: whole milliseconds below one second ("820 ms"),
+ * seconds with at most one decimal from one second up ("1.5 sec", "1,5 s").
+ */
+export function formatDuration(milliseconds: number, locale: Locale): string {
+  const rounded = Math.max(0, Math.round(milliseconds));
+  if (rounded < 1000) {
+    return new Intl.NumberFormat(locale, {
+      style: "unit",
+      unit: "millisecond",
+      unitDisplay: "short",
+    }).format(rounded);
+  }
+  return new Intl.NumberFormat(locale, {
+    style: "unit",
+    unit: "second",
+    unitDisplay: "short",
+    maximumFractionDigits: 1,
+  }).format(rounded / 1000);
+}
+
+/**
  * Time left as a fixed "HHh MMm SSs" clock, the same in every language. Seconds are rounded up and
  * carried into the larger units; hours are not capped, so a longer time never wraps around.
  */

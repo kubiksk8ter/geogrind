@@ -1,3 +1,5 @@
+import type { ResultKey } from "@/shared/metricsContract";
+import { noResults } from "@/shared/metricsContract";
 import type { StateData } from "./types";
 
 export const RATE_LIMIT_MAX = 10;
@@ -68,7 +70,7 @@ export function pruneState(state: StateData, now: number): StateData {
     daily:
       state.daily.day === today
         ? state.daily
-        : { day: today, count: 0, tokens: 0 },
+        : { day: today, count: 0, tokens: 0, results: noResults() },
     ...(aiBlockedUntil !== undefined &&
       aiBlockedUntil > now && { aiBlockedUntil }),
     clients,
@@ -86,6 +88,26 @@ export function addTokens(
     next: {
       ...pruned,
       daily: { ...pruned.daily, tokens: pruned.daily.tokens + tokens },
+    },
+    result: undefined,
+  };
+}
+
+/** Counts one processed command of the current UTC day by its result. */
+export function addResult(
+  state: StateData,
+  result: ResultKey,
+  now: number,
+): Transition<void> {
+  const pruned = pruneState(state, now);
+  const { results } = pruned.daily;
+  return {
+    next: {
+      ...pruned,
+      daily: {
+        ...pruned.daily,
+        results: { ...results, [result]: results[result] + 1 },
+      },
     },
     result: undefined,
   };

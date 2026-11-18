@@ -1,5 +1,5 @@
 import type { AiMetrics } from "@/shared/metricsContract";
-import { type AiAnswer, hasLimitFigure } from "../ai/aiAnswer";
+import { type AiAnswer, hasLimitFigure } from "../../ai/aiAnswer";
 
 export type LastRequest = NonNullable<AiMetrics["lastRequest"]>;
 export type LimitsFigures = NonNullable<AiMetrics["limits"]>;

@@ -3,6 +3,9 @@ import type { Highlight } from "@/shared/highlightSchema";
 
 export type MapFailureReason = "webgl" | "style" | "timeout";
 
+/** Whether this browser gets map tiles; known from the map's own tile loading only. */
+export type MapAvailability = "unknown" | "available" | "unavailable";
+
 export interface MapTarget {
   /** [[west, south], [east, north]] */
   bounds: Bounds;
@@ -26,6 +29,8 @@ export interface MapEngine {
 export interface MapEngineOptions {
   container: HTMLElement;
   onFailure: (reason: MapFailureReason) => void;
+  /** Called on every change only, never with the same value twice in a row. */
+  onAvailabilityChange: (availability: MapAvailability) => void;
 }
 
 export type CreateMapEngine = (options: MapEngineOptions) => MapEngine;

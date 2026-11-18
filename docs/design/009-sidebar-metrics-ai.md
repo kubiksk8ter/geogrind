@@ -191,7 +191,7 @@ changed. They refine D-7 and D-8; the data, contract and behaviour are unchanged
 | Shared contract | `MetricsResponse` types and Valibot schema | `src/shared/` |
 | Metrics tab | Poller, clock offset, formatting, items, empty / partial / outdated states | `src/components/metrics/` |
 | Panel tabs (changed) | Second definition `metrics` after `history` | `src/components/side-panel/` |
-| Messages (changed) | `panel.tabs.metrics`, `panel.metrics.*` | `messages/` |
+| Messages (changed) | `panel.tabs.metrics`, `panel.metrics.ai.*` (shared: `loading`, `loadFailed`, `outdated`, `noData`) | `messages/` |
 
 Server modules import `server-only`; the poller, parsing and formatting are framework-free.
 

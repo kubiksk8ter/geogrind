@@ -2,10 +2,11 @@ import { mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { noResults } from "@/shared/metricsContract";
 import { FakeClock } from "@/test/fakeClock";
 import { FileStateStore } from "./fileStateStore";
 import { CommandLimits } from "./limits";
-import { addTokens } from "./rules";
+import { addResult, addTokens } from "./rules";
 import { type StateData, StateUnavailableError } from "./types";
 
 let directory: string;
@@ -39,6 +40,7 @@ describe("FileStateStore tokens and read", () => {
       day: "2026-11-09",
       count: 3,
       tokens: 0,
+      results: noResults(),
     });
   });
 
@@ -115,6 +117,54 @@ describe("FileStateStore tokens and read", () => {
     await writeFile(join(directory, "state.lock"), "1");
 
     expect((await store.read()).daily.tokens).toBe(1);
+  });
+});
+
+describe("FileStateStore results of the day", () => {
+  const addSuccess = (state: StateData) => addResult(state, "success", NOW);
+
+  it("a file written before results existed stays valid and reads zeros", async () => {
+    await writeFile(
+      join(directory, "state.json"),
+      JSON.stringify({
+        version: 1,
+        daily: { day: "2026-11-09", count: 3, tokens: 270 },
+        clients: {},
+      }),
+    );
+
+    expect((await new FileStateStore(directory).read()).daily.results).toEqual(
+      noResults(),
+    );
+  });
+
+  it("parallel writers on two instances neither lose nor double count results", async () => {
+    const stores = [
+      new FileStateStore(directory),
+      new FileStateStore(directory),
+    ];
+
+    await Promise.all(
+      Array.from({ length: 20 }, (_, index) =>
+        stores[index % 2]?.transact(addSuccess),
+      ),
+    );
+
+    expect((await stores[0]?.read())?.daily.results.success).toBe(20);
+  });
+
+  it("AC-19: the day's results survive a restart", async () => {
+    const before = new FileStateStore(directory);
+    await before.transact(addSuccess);
+    await before.transact((state) => addResult(state, "not_found", NOW));
+
+    const afterRestart = new FileStateStore(directory);
+
+    expect((await afterRestart.read()).daily.results).toEqual({
+      ...noResults(),
+      success: 1,
+      not_found: 1,
+    });
   });
 });
 

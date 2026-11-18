@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatClock,
   formatCountdown,
+  formatDuration,
   formatEntryTime,
 } from "./timeFormatters";
 
@@ -61,6 +62,27 @@ describe("formatCountdown", () => {
     expect(plain(formatCountdown(58_001, "cs"))).toBe("59 s");
     expect(plain(formatCountdown(59_999, "cs"))).toBe("1 min");
     expect(plain(formatCountdown(119_100, "cs"))).toBe("2 min");
+  });
+});
+
+describe("formatDuration", () => {
+  it.each([
+    ["en", 820, "820 ms"],
+    ["en", 0, "0 ms"],
+    ["en", 999.4, "999 ms"],
+    ["en", 999.6, "1 sec"],
+    ["en", 1_450, "1.5 sec"],
+    ["en", 12_000, "12 sec"],
+    ["en", 1_234_000, "1,234 sec"],
+    ["cs", 820, "820 ms"],
+    ["cs", 1_450, "1,5 s"],
+    ["cs", 12_000, "12 s"],
+  ] as const)("FR-5, AC-16: %s %d ms reads %s", (locale, ms, expected) => {
+    expect(plain(formatDuration(ms, locale))).toBe(expected);
+  });
+
+  it("never reads a negative time", () => {
+    expect(plain(formatDuration(-5, "en"))).toBe("0 ms");
   });
 });
 

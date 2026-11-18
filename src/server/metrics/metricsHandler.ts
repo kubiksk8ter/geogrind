@@ -2,7 +2,9 @@ import "server-only";
 import type { MetricsResponse } from "@/shared/metricsContract";
 import type { AppEnv } from "../config/env";
 import type { Clock, StateStore } from "../state/types";
-import type { AiFigures } from "./aiFigures";
+import type { AiFigures } from "./ai/aiFigures";
+import type { CommandWindow } from "./app/commandWindow";
+import type { ServiceStatus } from "./app/serviceStatus";
 import { guardMetricsRequest } from "./metricsGuard";
 import { buildSnapshot } from "./metricsSnapshot";
 
@@ -10,6 +12,9 @@ import { buildSnapshot } from "./metricsSnapshot";
 export interface MetricsServices {
   store: StateStore;
   figures: AiFigures;
+  /** Read only through `summary`; nothing here records a command. */
+  commandWindow: Pick<CommandWindow, "summary">;
+  nominatim: Pick<ServiceStatus, "current">;
   clock: Clock;
 }
 
@@ -37,10 +42,13 @@ export function createMetricsHandler(deps: MetricsHandlerDeps) {
     const guard = guardMetricsRequest(request, env.appOrigins);
     if (!guard.ok) return failure("invalid_request", guard.status);
 
-    const { store, figures, clock } = deps.createServices(env);
+    const { store, figures, commandWindow, nominatim, clock } =
+      deps.createServices(env);
     const metrics = buildSnapshot({
       state: await store.read(),
       figures: figures.current(),
+      window: commandWindow.summary(),
+      nominatim: nominatim.current(),
       model: env.groqModel,
       dailyCap: env.dailyCap,
       now: clock.now(),
