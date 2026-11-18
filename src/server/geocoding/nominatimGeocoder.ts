@@ -48,9 +48,15 @@ export interface NominatimOptions {
   clock: Clock;
   sleep: (milliseconds: number, signal: AbortSignal) => Promise<void>;
   fetch?: typeof fetch;
+  /**
+   * Told the outcome of every real HTTP attempt (not of cache hits): true for a well-formed
+   * answer, "no result" included; false for a network error, abort, error status or bad shape.
+   */
+  observe?: (available: boolean) => void;
 }
 
 type Found = { bounds: Bounds; highlight?: Highlight } | null;
+type Candidate = v.InferOutput<typeof resultsSchema>[number];
 
 export class NominatimGeocoder implements Geocoder {
   private readonly spacer: RequestSpacer;
@@ -96,29 +102,7 @@ export class NominatimGeocoder implements Geocoder {
   }
 
   private async search(place: string, signal: AbortSignal): Promise<Found> {
-    const { baseUrl, contact } = this.options;
-    const query = new URLSearchParams({
-      q: place,
-      limit: CANDIDATE_COUNT,
-      format: "jsonv2",
-      polygon_geojson: "1",
-      polygon_threshold: POLYGON_TOLERANCE_DEGREES,
-      addressdetails: "0",
-    });
-    const send = this.options.fetch ?? fetch;
-    const response = await send(`${baseUrl}/search?${query}`, {
-      signal,
-      headers: { "User-Agent": contact ? `GeoGrind (${contact})` : "GeoGrind" },
-    });
-    if (!response.ok) {
-      throw new GeocoderError(`Geocoder answered ${response.status}`);
-    }
-
-    const results = v.safeParse(resultsSchema, await response.json());
-    if (!results.success) {
-      throw new GeocoderError("Geocoder answer has an unexpected shape");
-    }
-    const first = pickBest(place, results.output);
+    const first = pickBest(place, await this.request(place, signal));
     if (!first) return null;
 
     const [south, north, west, east] = first.boundingbox;
@@ -140,5 +124,50 @@ export class NominatimGeocoder implements Geocoder {
       bounds: ensureMinimumSize(bounds, minSpan),
       ...(highlight && { highlight }),
     };
+  }
+
+  /** One HTTP attempt; its outcome is reported whatever happens. */
+  private async request(
+    place: string,
+    signal: AbortSignal,
+  ): Promise<Candidate[]> {
+    const { baseUrl, contact } = this.options;
+    const query = new URLSearchParams({
+      q: place,
+      limit: CANDIDATE_COUNT,
+      format: "jsonv2",
+      polygon_geojson: "1",
+      polygon_threshold: POLYGON_TOLERANCE_DEGREES,
+      addressdetails: "0",
+    });
+    const send = this.options.fetch ?? fetch;
+    try {
+      const response = await send(`${baseUrl}/search?${query}`, {
+        signal,
+        headers: {
+          "User-Agent": contact ? `GeoGrind (${contact})` : "GeoGrind",
+        },
+      });
+      if (!response.ok) {
+        throw new GeocoderError(`Geocoder answered ${response.status}`);
+      }
+      const results = v.safeParse(resultsSchema, await response.json());
+      if (!results.success) {
+        throw new GeocoderError("Geocoder answer has an unexpected shape");
+      }
+      this.report(true);
+      return results.output;
+    } catch (error) {
+      this.report(false);
+      throw error;
+    }
+  }
+
+  private report(available: boolean): void {
+    try {
+      this.options.observe?.(available);
+    } catch {
+      // Collecting metrics must never change the result of a search.
+    }
   }
 }

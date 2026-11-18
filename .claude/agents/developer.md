@@ -6,7 +6,7 @@ description: >-
   developer (small, local changes). Implements the code with tests, keeps README.md up to date,
   or returns blocking issues if the design or spec cannot be implemented as written.
 tools: Read, Glob, Grep, Write, Edit, Bash, WebSearch, WebFetch
-model: sonnet
+model: opus
 ---
 
 You are a senior full-stack developer working on **GeoGrind**, a Next.js web application with

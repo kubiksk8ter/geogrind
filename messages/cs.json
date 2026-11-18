@@ -41,11 +41,93 @@
     "close": "Zavřít boční panel",
     "tabsLabel": "Sekce panelu",
     "tabs": {
-      "history": "Historie"
+      "history": "Historie",
+      "metrics": "Metriky"
     },
     "history": {
       "listLabel": "Historie příkazů",
       "empty": "Zatím žádné příkazy. Úspěšné příkazy se zobrazí zde."
+    },
+    "metrics": {
+      "loading": "Načítám údaje…",
+      "loadFailed": "Údaje se nepodařilo načíst. Zkouším to znovu.",
+      "outdated": "Údaje se nepodařilo aktualizovat a mohou být neaktuální. Zkouším to znovu.",
+      "empty": "Údaje se zobrazí po prvním příkazu.",
+      "noData": "bez dat",
+      "ai": {
+        "title": "AI",
+        "model": {
+          "line": "<label>Model:</label> {model}"
+        },
+        "cap": {
+          "title": "AI požadavky",
+          "value": "{used} / {cap}",
+          "ariaValueText": "využito {used} z {cap} požadavků",
+          "resets": "Obnovení za {time}"
+        },
+        "tokensToday": {
+          "title": "Spotřeba tokenů dnes (všichni uživatelé)"
+        },
+        "lastRequest": {
+          "title": "Poslední požadavek (tokeny)",
+          "prompt": "Vstup",
+          "completion": "Odpověď",
+          "total": "Celkem"
+        },
+        "limits": {
+          "requests": "Požadavky za den (Groq)",
+          "tokens": "Tokeny za minutu",
+          "value": "{remaining} / {limit}",
+          "ariaValueText": "zbývá {remaining} z {limit}",
+          "remainingOnly": "zbývá {remaining}",
+          "resets": "Obnoví se za {time}",
+          "resetUnknown": "Čas obnovení: neznámý",
+          "renewed": "Obnoveno. Údaj je neaktuální do dalšího příkazu."
+        }
+      },
+      "app": {
+        "title": "Aplikace",
+        "results": {
+          "title": "Příkazy dnes",
+          "chartLabel": "Výsledky dnešních příkazů: {list}",
+          "item": "{name}: {count} ({percent})",
+          "names": {
+            "success": "Úspěšné",
+            "unsupported": "Nepodporované",
+            "not_found": "Místo nenalezeno",
+            "wait": "Příliš brzy (pauza)",
+            "too_many_requests": "Příliš mnoho příkazů",
+            "ai_resting": "AI odpočívá",
+            "error": "Chyba"
+          }
+        },
+        "latency": {
+          "title": "Doba zpracování (poslední hodina)",
+          "titleSinceStart": "Doba zpracování (od spuštění)",
+          "axisStart": "−60 min",
+          "axisEnd": "teď",
+          "median": "Medián",
+          "p95": "95. percentil",
+          "chartLabel": "Doba zpracování po {bucket} min za posledních {minutes} min: medián {median}, 95. percentil {p95}, {count, plural, one {# příkaz} few {# příkazy} many {# příkazu} other {# příkazů}}."
+        },
+        "load": {
+          "title": "Zátěž",
+          "lastMinute": "Příkazy za poslední minutu",
+          "lastHour": "Příkazy za poslední hodinu",
+          "lastHourSinceStart": "Příkazy od spuštění",
+          "activeClients": "Aktivní klienti (poslední hodina)",
+          "activeClientsSinceStart": "Aktivní klienti (od spuštění)",
+          "inProgress": "Právě zpracovávané příkazy"
+        },
+        "services": {
+          "title": "Stav služeb",
+          "map": "Mapa",
+          "nominatim": "Nominatim",
+          "available": "Služba je dostupná",
+          "unavailable": "Služba není dostupná",
+          "unknown": "Stav zatím není známý"
+        }
+      }
     }
   }
 }

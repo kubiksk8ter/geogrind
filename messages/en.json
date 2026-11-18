@@ -41,11 +41,93 @@
     "close": "Close side panel",
     "tabsLabel": "Panel sections",
     "tabs": {
-      "history": "History"
+      "history": "History",
+      "metrics": "Metrics"
     },
     "history": {
       "listLabel": "Command history",
       "empty": "No commands yet. Successful commands will appear here."
+    },
+    "metrics": {
+      "loading": "Loading figures…",
+      "loadFailed": "The figures could not be loaded. Trying again.",
+      "outdated": "The figures could not be updated and may be out of date. Trying again.",
+      "empty": "Data appears after the first command.",
+      "noData": "no data",
+      "ai": {
+        "title": "AI",
+        "model": {
+          "line": "<label>Model:</label> {model}"
+        },
+        "cap": {
+          "title": "AI requests",
+          "value": "{used} / {cap}",
+          "ariaValueText": "{used} of {cap} requests used",
+          "resets": "Renewal in {time}"
+        },
+        "tokensToday": {
+          "title": "Tokens used today (all users)"
+        },
+        "lastRequest": {
+          "title": "Last request (tokens)",
+          "prompt": "Input",
+          "completion": "Output",
+          "total": "Total"
+        },
+        "limits": {
+          "requests": "Requests per day (Groq)",
+          "tokens": "Tokens per minute",
+          "value": "{remaining} / {limit}",
+          "ariaValueText": "{remaining} of {limit} remaining",
+          "remainingOnly": "{remaining} remaining",
+          "resets": "Renews in {time}",
+          "resetUnknown": "Renewal time: unknown",
+          "renewed": "Renewed. The figure is out of date until the next command."
+        }
+      },
+      "app": {
+        "title": "Application",
+        "results": {
+          "title": "Commands today",
+          "chartLabel": "Results of today's commands: {list}",
+          "item": "{name}: {count} ({percent})",
+          "names": {
+            "success": "Successful",
+            "unsupported": "Unsupported",
+            "not_found": "Place not found",
+            "wait": "Too early (pause)",
+            "too_many_requests": "Too many cmds",
+            "ai_resting": "AI resting",
+            "error": "Error"
+          }
+        },
+        "latency": {
+          "title": "Processing time (last hour)",
+          "titleSinceStart": "Processing time (since start)",
+          "axisStart": "−60 min",
+          "axisEnd": "now",
+          "median": "Median",
+          "p95": "95th percentile",
+          "chartLabel": "Processing time per {bucket} min over the last {minutes} min: median {median}, 95th percentile {p95}, {count, plural, one {# command} other {# commands}}."
+        },
+        "load": {
+          "title": "Load",
+          "lastMinute": "Commands in the last minute",
+          "lastHour": "Commands in the last hour",
+          "lastHourSinceStart": "Commands since start",
+          "activeClients": "Active clients (last hour)",
+          "activeClientsSinceStart": "Active clients (since start)",
+          "inProgress": "Commands in progress"
+        },
+        "services": {
+          "title": "Service status",
+          "map": "Map",
+          "nominatim": "Nominatim",
+          "available": "Service is available",
+          "unavailable": "Service is not available",
+          "unknown": "Status not known yet"
+        }
+      }
     }
   }
 }

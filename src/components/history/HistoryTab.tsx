@@ -2,13 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import { useLocaleSwitch } from "@/i18n/LocaleProvider";
+import { formatEntryTime } from "@/shared/timeFormatters";
 import {
   MAP_CONTROL_FOCUS_INSET_CLASS_NAME,
   TRANSITION_CLASS_NAME,
 } from "../sharedConstants";
 import type { PanelTabContentProps } from "../side-panel/panelTypes";
 import { entryLabel } from "./entryLabel";
-import { formatEntryTime } from "./formatEntryTime";
 import { useHistoryStore } from "./HistoryStoreProvider";
 import { useCurrentTime } from "./useCurrentTime";
 

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-type Handler = () => void;
+type Handler = (event?: unknown) => void;
 
 const mocks = vi.hoisted(() => ({
   handlers: {} as Record<string, Handler>,
@@ -53,8 +53,16 @@ import {
   HIGHLIGHT_FADE_MS,
   HIGHLIGHT_LIFETIME_MS,
 } from "./maplibre-engine";
+import type { MapEngineOptions } from "./types";
 
 const container = document.createElement("div");
+const styleError = { error: new Error("style failed") };
+const options = (overrides: Partial<MapEngineOptions> = {}) => ({
+  container,
+  onFailure: vi.fn(),
+  onAvailabilityChange: vi.fn(),
+  ...overrides,
+});
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -75,7 +83,7 @@ afterEach(() => vi.useRealTimers());
 
 describe("createMapEngine", () => {
   it("AC-2: fits the Czech bounds with the configured style", () => {
-    createMapEngine({ container, onFailure: vi.fn() });
+    createMapEngine(options());
 
     expect(mocks.construct).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -87,7 +95,7 @@ describe("createMapEngine", () => {
   });
 
   it("FR-6: adds the controls slot after the zoom control", () => {
-    const engine = createMapEngine({ container, onFailure: vi.fn() });
+    const engine = createMapEngine(options());
 
     const [zoom, slot] = mocks.addControl.mock.calls.map(
       ([control]) => control,
@@ -98,7 +106,7 @@ describe("createMapEngine", () => {
   });
 
   it("FR-15: shows the collapsible attribution in the top-left corner only", () => {
-    createMapEngine({ container, onFailure: vi.fn() });
+    createMapEngine(options());
 
     expect(mocks.construct).toHaveBeenCalledWith(
       expect.objectContaining({ attributionControl: false }),
@@ -115,34 +123,34 @@ describe("createMapEngine", () => {
     });
     const onFailure = vi.fn();
 
-    createMapEngine({ container, onFailure });
+    createMapEngine(options({ onFailure }));
 
     expect(onFailure).toHaveBeenCalledExactlyOnceWith("webgl");
   });
 
   it("AC-14: reports style failure once for an error before the style loaded", () => {
     const onFailure = vi.fn();
-    createMapEngine({ container, onFailure });
+    createMapEngine(options({ onFailure }));
 
-    mocks.handlers.error?.();
-    mocks.handlers.error?.();
+    mocks.handlers.error?.(styleError);
+    mocks.handlers.error?.(styleError);
 
     expect(onFailure).toHaveBeenCalledExactlyOnceWith("style");
   });
 
   it("ignores errors after the style loaded (single tile errors)", () => {
     const onFailure = vi.fn();
-    createMapEngine({ container, onFailure });
+    createMapEngine(options({ onFailure }));
 
     mocks.handlers["style.load"]?.();
-    mocks.handlers.error?.();
+    mocks.handlers.error?.(styleError);
 
     expect(onFailure).not.toHaveBeenCalled();
   });
 
   it("reports timeout when the map never finishes loading", () => {
     const onFailure = vi.fn();
-    createMapEngine({ container, onFailure });
+    createMapEngine(options({ onFailure }));
 
     vi.advanceTimersByTime(MAP_CONFIG.loadTimeoutMs);
 
@@ -151,7 +159,7 @@ describe("createMapEngine", () => {
 
   it("does not time out once the map has loaded", () => {
     const onFailure = vi.fn();
-    createMapEngine({ container, onFailure });
+    createMapEngine(options({ onFailure }));
 
     mocks.handlers.load?.();
     vi.advanceTimersByTime(MAP_CONFIG.loadTimeoutMs);
@@ -160,7 +168,7 @@ describe("createMapEngine", () => {
   });
 
   it("replaces icons missing from the style's sprite with a placeholder", () => {
-    createMapEngine({ container, onFailure: vi.fn() });
+    createMapEngine(options());
 
     mocks.resolveMissingImage?.("office");
 
@@ -179,7 +187,7 @@ describe("createMapEngine", () => {
     };
 
     it("FR-2: fits the whole target with a capped zoom", () => {
-      const engine = createMapEngine({ container, onFailure: vi.fn() });
+      const engine = createMapEngine(options());
 
       engine.moveTo(target, "animate");
 
@@ -190,7 +198,7 @@ describe("createMapEngine", () => {
     });
 
     it("animates the move for normal motion", () => {
-      const engine = createMapEngine({ container, onFailure: vi.fn() });
+      const engine = createMapEngine(options());
 
       engine.moveTo(target, "animate");
 
@@ -200,7 +208,7 @@ describe("createMapEngine", () => {
     });
 
     it("AC-26: jumps instead of animating for reduced motion", () => {
-      const engine = createMapEngine({ container, onFailure: vi.fn() });
+      const engine = createMapEngine(options());
 
       engine.moveTo(target, "jump");
 
@@ -218,7 +226,7 @@ describe("createMapEngine", () => {
     const point: Highlight = { type: "Point", coordinates: [16.6, 49.2] };
 
     it("AC-1: adds the highlight source and its layers once the style has loaded", () => {
-      createMapEngine({ container, onFailure: vi.fn() });
+      createMapEngine(options());
 
       mocks.handlers["style.load"]?.();
 
@@ -234,7 +242,7 @@ describe("createMapEngine", () => {
     });
 
     it("AC-2: draws the point exactly where the server put it", () => {
-      const engine = createMapEngine({ container, onFailure: vi.fn() });
+      const engine = createMapEngine(options());
       mocks.handlers["style.load"]?.();
       mocks.sourceReady = true;
 
@@ -247,7 +255,7 @@ describe("createMapEngine", () => {
     });
 
     it("AC-1: a highlight asked for before the style loaded is drawn when it has", () => {
-      const engine = createMapEngine({ container, onFailure: vi.fn() });
+      const engine = createMapEngine(options());
 
       engine.moveTo({ bounds, highlight: point }, "animate");
       mocks.handlers["style.load"]?.();
@@ -257,7 +265,7 @@ describe("createMapEngine", () => {
     });
 
     it("AC-7: a target without a highlight leaves nothing drawn", () => {
-      const engine = createMapEngine({ container, onFailure: vi.fn() });
+      const engine = createMapEngine(options());
       mocks.handlers["style.load"]?.();
       mocks.sourceReady = true;
       engine.moveTo({ bounds, highlight: point }, "animate");
@@ -271,7 +279,7 @@ describe("createMapEngine", () => {
     });
 
     it("AC-8: clearHighlight removes the highlight without moving the view", () => {
-      const engine = createMapEngine({ container, onFailure: vi.fn() });
+      const engine = createMapEngine(options());
       mocks.handlers["style.load"]?.();
       mocks.sourceReady = true;
       engine.moveTo({ bounds, highlight: point }, "animate");
@@ -303,7 +311,7 @@ describe("createMapEngine", () => {
         .map(([, , value]) => value);
 
     const setup = () => {
-      const engine = createMapEngine({ container, onFailure: vi.fn() });
+      const engine = createMapEngine(options());
       mocks.handlers["style.load"]?.();
       mocks.sourceReady = true;
       return engine;
@@ -403,9 +411,96 @@ describe("createMapEngine", () => {
     });
   });
 
+  describe("map availability (spec 010)", () => {
+    const loadedTile = { tile: {}, sourceId: "openmaptiles" };
+    const failedTile = {
+      error: new Error("Failed to fetch"),
+      tile: {},
+      sourceId: "openmaptiles",
+    };
+
+    const setup = () => {
+      const onAvailabilityChange = vi.fn();
+      const onFailure = vi.fn();
+      createMapEngine(options({ onAvailabilityChange, onFailure }));
+      mocks.handlers["style.load"]?.();
+      return { onAvailabilityChange, onFailure };
+    };
+    const fail = (times: number, event: object = failedTile) => {
+      for (let i = 0; i < times; i++) mocks.handlers.error?.(event);
+    };
+
+    it("is unknown at the start and available with the first loaded tile", () => {
+      const { onAvailabilityChange } = setup();
+      expect(onAvailabilityChange).not.toHaveBeenCalled();
+
+      mocks.handlers.sourcedata?.(loadedTile);
+
+      expect(onAvailabilityChange).toHaveBeenCalledExactlyOnceWith("available");
+    });
+
+    it("source events without a tile (metadata) say nothing", () => {
+      const { onAvailabilityChange } = setup();
+
+      mocks.handlers.sourcedata?.({ sourceId: "openmaptiles" });
+
+      expect(onAvailabilityChange).not.toHaveBeenCalled();
+    });
+
+    it("AC-9: one failed tile is ignored, three in a row make the map unavailable", () => {
+      const { onAvailabilityChange, onFailure } = setup();
+      mocks.handlers.sourcedata?.(loadedTile);
+
+      fail(1);
+      expect(onAvailabilityChange).toHaveBeenLastCalledWith("available");
+
+      fail(2);
+      expect(onAvailabilityChange).toHaveBeenLastCalledWith("unavailable");
+      expect(onFailure).not.toHaveBeenCalled();
+    });
+
+    it("AC-9: a loaded tile makes it available again", () => {
+      const { onAvailabilityChange } = setup();
+      fail(3);
+
+      mocks.handlers.sourcedata?.(loadedTile);
+
+      expect(onAvailabilityChange.mock.calls).toEqual([
+        ["unavailable"],
+        ["available"],
+      ]);
+    });
+
+    it("a missing tile (404) is not an error", () => {
+      const { onAvailabilityChange } = setup();
+      const missing = Object.assign(new Error("Not Found"), { status: 404 });
+
+      fail(5, { ...failedTile, error: missing });
+
+      expect(onAvailabilityChange).not.toHaveBeenCalled();
+    });
+
+    it("style, glyph and sprite errors without a tile are ignored", () => {
+      const { onAvailabilityChange } = setup();
+
+      fail(5, { error: new Error("glyphs failed") });
+
+      expect(onAvailabilityChange).not.toHaveBeenCalled();
+    });
+
+    it("the locally drawn highlight source neither fails nor rescues the map", () => {
+      const { onAvailabilityChange } = setup();
+      fail(3);
+
+      mocks.handlers.sourcedata?.({ tile: {}, sourceId: HIGHLIGHT_SOURCE_ID });
+
+      expect(onAvailabilityChange.mock.calls).toEqual([["unavailable"]]);
+    });
+  });
+
   it("destroy removes the map and cancels the timeout", () => {
     const onFailure = vi.fn();
-    const engine = createMapEngine({ container, onFailure });
+    const engine = createMapEngine(options({ onFailure }));
 
     engine.destroy();
     vi.advanceTimersByTime(MAP_CONFIG.loadTimeoutMs);

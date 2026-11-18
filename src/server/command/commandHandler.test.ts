@@ -8,6 +8,11 @@ import { MemoryStateStore } from "@/test/memoryStateStore";
 import type { AiClient, AiResult } from "../ai/types";
 import { type AppEnv, ConfigError } from "../config/env";
 import type { Geocoder } from "../geocoding/types";
+import {
+  type CommandMeasurementRecorder,
+  createCommandMeasurement,
+} from "../metrics/app/commandMeasurement";
+import { CommandWindow } from "../metrics/app/commandWindow";
 import { CommandLimits } from "../state/limits";
 import {
   COOLDOWN_MS,
@@ -54,6 +59,7 @@ class Harness {
     }),
   );
   readonly find = vi.fn<Geocoder["find"]>(async () => ({ bounds: BRNO }));
+  readonly measurement = vi.fn<CommandMeasurementRecorder>();
   signal: AbortSignal = new AbortController().signal;
   store: StateStore = this.memory;
   loadEnv: () => AppEnv = () => ENV;
@@ -67,6 +73,7 @@ class Harness {
     }),
     createRequestSignal: () => this.signal,
     log: (entry) => this.logs.push(entry),
+    measurement: (entry) => this.measurement(entry),
   });
 
   send(
@@ -638,6 +645,9 @@ describe("state problems", () => {
     async transact(): Promise<never> {
       throw new StateUnavailableError("corrupt");
     },
+    async read(): Promise<never> {
+      throw new StateUnavailableError("corrupt");
+    },
   };
 
   it("AC-29: unavailable state means the generic error and no AI call", async () => {
@@ -654,5 +664,119 @@ describe("state problems", () => {
     const snapshot: StateData = h.memory.snapshot();
 
     expect(Object.keys(snapshot.clients)).toEqual([IP]);
+  });
+});
+
+describe("metrics measurement (spec 010)", () => {
+  const measured = () =>
+    h.measurement.mock.calls.map(([entry]) => entry.result);
+
+  it("FR-2: a successful command is measured once as success with its duration and client", async () => {
+    await h.send();
+
+    expect(h.measurement).toHaveBeenCalledExactlyOnceWith({
+      result: "success",
+      durationMs: expect.any(Number),
+      clientId: IP,
+    });
+  });
+
+  it("FR-2: every processed result is measured with its code", async () => {
+    h.interpret.mockResolvedValueOnce({
+      kind: "output",
+      output: { action: "unsupported" },
+    });
+    await h.send();
+    await h.send();
+    h.clock.advance(COOLDOWN_MS);
+    h.find.mockResolvedValueOnce(null);
+    await h.send();
+    h.clock.advance(COOLDOWN_MS);
+    h.interpret.mockRejectedValueOnce(new Error("Groq answered 503"));
+    await h.send();
+    h.clock.advance(COOLDOWN_MS);
+    h.interpret.mockResolvedValueOnce({
+      kind: "quota_exhausted",
+      retryAfterSeconds: 60,
+    });
+    await h.send();
+
+    expect(measured()).toEqual([
+      "unsupported",
+      "wait",
+      "not_found",
+      "error",
+      "ai_resting",
+    ]);
+  });
+
+  it("FR-2: a refused request over the rate limit is measured as too_many_requests", async () => {
+    for (let i = 0; i < RATE_LIMIT_MAX; i++) await h.send({ nope: 1 });
+
+    await h.send();
+
+    expect(measured()).toEqual(["too_many_requests"]);
+  });
+
+  it.each([
+    ["a bad body", () => h.send({ nope: 1 })],
+    ["a foreign origin", () => h.send(undefined, { origin: "https://x.test" })],
+    ["another method", () => h.raw(null, { method: "GET" })],
+  ])("AC-3: %s (invalid_request) is not measured", async (_name, send) => {
+    await send();
+
+    expect(h.measurement).not.toHaveBeenCalled();
+  });
+
+  it("a command without a client address is measured as an error without a client", async () => {
+    await h.send(undefined, { "x-real-ip": "" });
+
+    expect(h.measurement).toHaveBeenCalledExactlyOnceWith({
+      result: "error",
+      durationMs: expect.any(Number),
+      clientId: null,
+    });
+  });
+
+  it("AC-15: a throwing measurement leaves the answer and the log unchanged", async () => {
+    const plain = await (await h.send()).json();
+    h.clock.advance(COOLDOWN_MS);
+    h.measurement.mockImplementation(() => {
+      throw new Error("metrics broken");
+    });
+
+    const response = await h.send();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(plain);
+    expect(h.logs.at(-1)).toEqual({
+      code: "ok",
+      durationMs: expect.any(Number),
+    });
+  });
+
+  it("AC-2: the counts reach the state store and the window", async () => {
+    const window = new CommandWindow({ clock: h.clock });
+    h.measurement.mockImplementation(
+      createCommandMeasurement({
+        window,
+        openStore: () => h.memory,
+        clock: h.clock,
+        log: () => {},
+      }),
+    );
+
+    await h.send();
+    await h.send();
+    await vi.waitFor(() =>
+      expect(h.memory.snapshot().daily.results).toMatchObject({
+        success: 1,
+        wait: 1,
+      }),
+    );
+    expect(window.summary().load).toMatchObject({
+      lastHour: 2,
+      activeClients: 1,
+    });
   });
 });

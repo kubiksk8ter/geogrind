@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { FakeClock } from "@/test/fakeClock";
+import { InMemoryServiceStatus } from "../metrics/app/serviceStatus";
 import { NominatimGeocoder } from "./nominatimGeocoder";
 import { GeocoderError } from "./types";
 
@@ -437,6 +438,115 @@ describe("NominatimGeocoder highlight", () => {
       [139.9, 35.9],
     ]);
     expect(found).not.toHaveProperty("highlight");
+  });
+});
+
+describe("NominatimGeocoder status (AC-10)", () => {
+  function observed(respond: Parameters<typeof setup>[0]) {
+    const status = new InMemoryServiceStatus();
+    const clock = new FakeClock();
+    const fetchStub = vi.fn<typeof fetch>(async (input) =>
+      respond ? respond(String(input)) : Response.json([BRNO]),
+    );
+    const geocoder = new NominatimGeocoder({
+      baseUrl: "https://geo.example",
+      contact: undefined,
+      clock,
+      sleep: async (milliseconds) => clock.advance(milliseconds),
+      fetch: fetchStub,
+      observe: (available) => status.report(available),
+    });
+    return { geocoder, status, fetchStub };
+  }
+
+  it("is unknown before the first call (and so after a restart)", () => {
+    expect(observed(undefined).status.current()).toBeNull();
+  });
+
+  it.each([
+    ["a result", () => Response.json([BRNO])],
+    ["no result (a valid answer)", () => Response.json([])],
+  ])("is available after %s", async (_name, respond) => {
+    const { geocoder, status } = observed(respond);
+
+    await geocoder.find("Brno", signal);
+
+    expect(status.current()).toBe(true);
+  });
+
+  it.each([
+    ["a network error", () => Promise.reject(new TypeError("fetch failed"))],
+    [
+      "a timeout",
+      () =>
+        Promise.reject(
+          new DOMException("The operation timed out", "TimeoutError"),
+        ),
+    ],
+    ["HTTP 429", () => new Response("slow down", { status: 429 })],
+    ["HTTP 503", () => new Response("down", { status: 503 })],
+    ["a bad shape", () => Response.json({ error: "x" })],
+    ["a non-JSON body", () => new Response("<html>")],
+  ])("is unavailable after %s", async (_name, respond) => {
+    const { geocoder, status } = observed(respond);
+
+    await expect(geocoder.find("Brno", signal)).rejects.toThrow();
+
+    expect(status.current()).toBe(false);
+  });
+
+  it("recovers to available with the next good answer", async () => {
+    let fail = true;
+    const { geocoder, status } = observed(() =>
+      fail ? new Response("", { status: 503 }) : Response.json([BRNO]),
+    );
+    await expect(geocoder.find("Brno", signal)).rejects.toThrow();
+    fail = false;
+
+    await geocoder.find("Brno", signal);
+
+    expect(status.current()).toBe(true);
+  });
+
+  it("a cache hit reports nothing and makes no call", async () => {
+    const { geocoder, status, fetchStub } = observed(() =>
+      Response.json([BRNO]),
+    );
+    await geocoder.find("Brno", signal);
+    const report = vi.spyOn(status, "report");
+
+    await geocoder.find("brno", signal);
+
+    expect(report).not.toHaveBeenCalled();
+    expect(fetchStub).toHaveBeenCalledOnce();
+  });
+
+  it("a request aborted while waiting for its turn reports nothing", async () => {
+    const { geocoder, status } = observed(() => Response.json([BRNO]));
+    const controller = new AbortController();
+    controller.abort(new Error("budget"));
+
+    await expect(geocoder.find("Brno", controller.signal)).rejects.toThrow();
+
+    expect(status.current()).toBeNull();
+  });
+
+  it("NFR-6: a throwing observer does not change the result", async () => {
+    const { geocoder: plain } = observed(() => Response.json([BRNO]));
+    const geocoder = new NominatimGeocoder({
+      baseUrl: "https://geo.example",
+      contact: undefined,
+      clock: new FakeClock(),
+      sleep: async () => {},
+      fetch: async () => Response.json([BRNO]),
+      observe: () => {
+        throw new Error("metrics broken");
+      },
+    });
+
+    expect(await geocoder.find("Brno", signal)).toEqual(
+      await plain.find("Brno", signal),
+    );
   });
 });
 

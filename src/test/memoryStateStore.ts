@@ -16,6 +16,10 @@ export class MemoryStateStore implements StateStore {
     return result;
   }
 
+  async read(): Promise<StateData> {
+    return this.state;
+  }
+
   snapshot(): StateData {
     return this.state;
   }

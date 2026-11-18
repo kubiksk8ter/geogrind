@@ -13,6 +13,7 @@ import type { Locale } from "@/i18n/routing";
 import type { CreateMapEngine, MapEngine, MapEngineOptions } from "@/map";
 import type { Bounds } from "@/shared/actions";
 import { FakeStorage } from "@/test/fakeStorage";
+import { makeSnapshot } from "@/test/metricsSnapshot";
 import { stubMatchMedia } from "@/test/stubMatchMedia";
 import { HistoryStoreProvider } from "../history/HistoryStoreProvider";
 import { createSessionHistoryStorage } from "../history/historyStorage";
@@ -36,19 +37,22 @@ function fakeSlot() {
   return slot;
 }
 
+function historyStore(storage = new FakeStorage()) {
+  return createHistoryStore({
+    storage: createSessionHistoryStorage(() => storage),
+    now: Date.now,
+    newId: () => crypto.randomUUID(),
+  });
+}
+
 function renderMap(
   locale: Locale,
   createEngine: CreateMapEngine,
   storage = new FakeStorage(),
 ) {
-  const store = createHistoryStore({
-    storage: createSessionHistoryStorage(() => storage),
-    now: Date.now,
-    newId: () => crypto.randomUUID(),
-  });
   return render(
     <LocaleProvider initialLocale={locale}>
-      <HistoryStoreProvider store={store}>
+      <HistoryStoreProvider store={historyStore(storage)}>
         <MapView createEngine={createEngine} />
       </HistoryStoreProvider>
     </LocaleProvider>,
@@ -234,6 +238,65 @@ describe("MapView", () => {
       await zoomToBrno();
 
       expect(moveTo).toHaveBeenCalledExactlyOnceWith(expect.anything(), "jump");
+    });
+  });
+
+  describe("map status in the Metrics tab (spec 010)", () => {
+    async function openMetrics() {
+      fireEvent.click(screen.getByRole("button", { name: "Open side panel" }));
+      const dialog = await screen.findByRole("dialog");
+      fireEvent.click(within(dialog).getByRole("tab", { name: "Metrics" }));
+      await within(dialog).findByRole("heading", { name: "Application" });
+    }
+
+    const mapLight = () => {
+      const row = screen
+        .getAllByRole("listitem")
+        .find((item) => item.textContent === "Map");
+      if (!row) throw new Error("no map light");
+      return within(row).getByRole("img").getAttribute("title");
+    };
+
+    it("AC-9: the light follows the engine's tile state without any request for it", async () => {
+      const fetchMock = vi.fn(async () =>
+        Response.json({ ok: true, metrics: makeSnapshot() }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+      const { calls } = setup("en");
+      await openMetrics();
+      expect(mapLight()).toBe("Status not known yet");
+      const fetches = fetchMock.mock.calls.length;
+
+      act(() => calls[0]?.onAvailabilityChange("unavailable"));
+      expect(mapLight()).toBe("Service is not available");
+      act(() => calls[0]?.onAvailabilityChange("available"));
+      expect(mapLight()).toBe("Service is available");
+
+      expect(fetchMock).toHaveBeenCalledTimes(fetches);
+    });
+
+    it("a new engine starts unknown again", async () => {
+      vi.stubGlobal("fetch", async () =>
+        Response.json({ ok: true, metrics: makeSnapshot() }),
+      );
+      const { calls, createEngine, rerender } = setup("en");
+      act(() => calls[0]?.onAvailabilityChange("available"));
+      await openMetrics();
+      expect(mapLight()).toBe("Service is available");
+
+      const replacement = vi.fn<CreateMapEngine>((options) =>
+        createEngine(options),
+      );
+      rerender(
+        <LocaleProvider initialLocale="en">
+          <HistoryStoreProvider store={historyStore()}>
+            <MapView createEngine={replacement} />
+          </HistoryStoreProvider>
+        </LocaleProvider>,
+      );
+
+      await waitFor(() => expect(replacement).toHaveBeenCalledOnce());
+      expect(mapLight()).toBe("Status not known yet");
     });
   });
 

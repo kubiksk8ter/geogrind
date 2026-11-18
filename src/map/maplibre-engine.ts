@@ -1,5 +1,6 @@
 import {
   AttributionControl,
+  type ErrorEvent,
   type GeoJSONSource,
   type IControl,
   Map as MapLibreMap,
@@ -14,6 +15,7 @@ import {
   HIGHLIGHT_SOURCE_ID,
   highlightData,
 } from "./highlightLayers";
+import { createTileAvailability } from "./tileAvailability";
 import type { CreateMapEngine, MapEngine } from "./types";
 
 // Bundlers rewrite import.meta.url inside maplibre-gl, so its default worker
@@ -52,7 +54,26 @@ class SlotControl implements IControl {
   }
 }
 
-export const createMapEngine: CreateMapEngine = ({ container, onFailure }) => {
+// A few failed tiles in a row, with none loading between, mean the tile host is not reachable.
+const TILE_FAILURE_THRESHOLD = 3;
+
+/** Highlight tiles are cut in the browser from local data, so they say nothing about the network. */
+const isNetworkTile = (event: object) =>
+  "tile" in event &&
+  event.tile !== undefined &&
+  !("sourceId" in event && event.sourceId === HIGHLIGHT_SOURCE_ID);
+
+// MapLibre 6 reports a failed tile as an `error` event carrying the tile; a missing tile (404) is
+// a normal empty area and is not reported, the status check only makes sure of that.
+const isTileFailure = (event: ErrorEvent) =>
+  isNetworkTile(event) &&
+  !("status" in event.error && event.error.status === 404);
+
+export const createMapEngine: CreateMapEngine = ({
+  container,
+  onFailure,
+  onAvailabilityChange,
+}) => {
   let map: MapLibreMap;
   try {
     map = new MapLibreMap({
@@ -164,9 +185,17 @@ export const createMapEngine: CreateMapEngine = ({ container, onFailure }) => {
     for (const layer of HIGHLIGHT_LAYERS) map.addLayer(layer);
   });
   map.on("load", settle);
+  const availability = createTileAvailability({
+    failureThreshold: TILE_FAILURE_THRESHOLD,
+    onChange: onAvailabilityChange,
+  });
+  map.on("sourcedata", (event) => {
+    if (isNetworkTile(event)) availability.tileLoaded();
+  });
   // Errors after the style has loaded are single tile/glyph errors; MapLibre retries them.
-  map.on("error", () => {
+  map.on("error", (event) => {
     if (!styleLoaded) fail("style");
+    if (isTileFailure(event)) availability.tileFailed();
   });
 
   const engine: MapEngine = {
