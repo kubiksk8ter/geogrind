@@ -4,6 +4,7 @@ import type { Bounds } from "@/shared/actions";
 import { commandResponseSchema } from "@/shared/commandContract";
 import type { Highlight } from "@/shared/highlightSchema";
 import { FakeClock } from "@/test/fakeClock";
+import { createFakeRandomBytes } from "@/test/fakeRandomBytes";
 import { MemoryStateStore } from "@/test/memoryStateStore";
 import type { AiClient, AiResult } from "../ai/types";
 import { type AppEnv, ConfigError } from "../config/env";
@@ -13,6 +14,10 @@ import {
   createCommandMeasurement,
 } from "../metrics/app/commandMeasurement";
 import { CommandWindow } from "../metrics/app/commandWindow";
+import {
+  createClientKeyring,
+  type Pseudonymizer,
+} from "../privacy/clientKeyring";
 import { CommandLimits } from "../state/limits";
 import {
   COOLDOWN_MS,
@@ -60,6 +65,10 @@ class Harness {
   );
   readonly find = vi.fn<Geocoder["find"]>(async () => ({ bounds: BRNO }));
   readonly measurement = vi.fn<CommandMeasurementRecorder>();
+  keyring = this.newKeyring(1);
+  readonly pseudonymize = vi.fn<Pseudonymizer>((clientId) =>
+    this.keyring.pseudonymize(clientId),
+  );
   signal: AbortSignal = new AbortController().signal;
   store: StateStore = this.memory;
   loadEnv: () => AppEnv = () => ENV;
@@ -74,7 +83,25 @@ class Harness {
     createRequestSignal: () => this.signal,
     log: (entry) => this.logs.push(entry),
     measurement: (entry) => this.measurement(entry),
+    pseudonymize: (clientId) => this.pseudonymize(clientId),
   });
+
+  /** A server restart as the keyring sees it: the key is lost, the state store stays. */
+  restart() {
+    this.keyring = this.newKeyring(2);
+  }
+
+  private newKeyring(seed: number) {
+    return createClientKeyring({
+      clock: this.clock,
+      randomBytes: createFakeRandomBytes(seed).randomBytes,
+    });
+  }
+
+  /** The pseudonym the handler uses for `ip` under the current key. */
+  pseudonymOf(ip = IP) {
+    return this.keyring.pseudonymize(ip);
+  }
 
   send(
     body: unknown = { text: TEXT, locale: "cs" },
@@ -663,7 +690,7 @@ describe("state problems", () => {
 
     const snapshot: StateData = h.memory.snapshot();
 
-    expect(Object.keys(snapshot.clients)).toEqual([IP]);
+    expect(Object.keys(snapshot.clients)).toEqual([h.pseudonymOf(IP)]);
   });
 });
 
@@ -677,7 +704,7 @@ describe("metrics measurement (spec 010)", () => {
     expect(h.measurement).toHaveBeenCalledExactlyOnceWith({
       result: "success",
       durationMs: expect.any(Number),
-      clientId: IP,
+      clientId: h.pseudonymOf(IP),
     });
   });
 
@@ -778,5 +805,120 @@ describe("metrics measurement (spec 010)", () => {
       lastHour: 2,
       activeClients: 1,
     });
+  });
+});
+
+describe("client pseudonyms (spec 011)", () => {
+  const IPV6 = "2001:db8:1:2:3:4:5:6";
+
+  function withRealMeasurement() {
+    const window = new CommandWindow({ clock: h.clock });
+    h.measurement.mockImplementation(
+      createCommandMeasurement({
+        window,
+        openStore: () => h.memory,
+        clock: h.clock,
+        log: () => {},
+      }),
+    );
+    return window;
+  }
+
+  it("AC-1, AC-9: the state and the window get the same pseudonym, never the IP", async () => {
+    const window = withRealMeasurement();
+
+    await h.send();
+
+    const pseudonym = h.pseudonymOf(IP);
+    expect(Object.keys(h.memory.snapshot().clients)).toEqual([pseudonym]);
+    expect(h.measurement.mock.calls[0]?.[0].clientId).toBe(pseudonym);
+    expect(JSON.stringify(window)).toContain(pseudonym);
+    expect(JSON.stringify([h.memory.snapshot(), window])).not.toContain(IP);
+  });
+
+  it("AC-1: neither an IPv6 address nor its /64 prefix reaches the state or the window", async () => {
+    const window = withRealMeasurement();
+
+    await h.send(undefined, { "x-real-ip": IPV6 });
+
+    const stored = JSON.stringify([h.memory.snapshot(), window]);
+    expect(Object.keys(h.memory.snapshot().clients)).toEqual([
+      h.pseudonymOf("2001:0db8:0001:0002::/64"),
+    ]);
+    for (const part of ["2001:db8", "2001:0db8", "::/64"]) {
+      expect(stored).not.toContain(part);
+    }
+  });
+
+  it("AC-2: a failed command leaves no IP in the state, the window, the logs or the answer", async () => {
+    const window = withRealMeasurement();
+    h.interpret.mockRejectedValue(new Error(`failed for ${IP}`));
+
+    const response = await h.send();
+
+    const everything = JSON.stringify([
+      h.memory.snapshot(),
+      window,
+      window.summary(),
+      h.logs,
+      await response.text(),
+    ]);
+    expect(everything).not.toContain(IP);
+  });
+
+  it("AC-3: one IP is one client under one key, so the 11th request in a minute is limited", async () => {
+    for (let i = 0; i < RATE_LIMIT_MAX; i++) await h.send({ nope: 1 });
+
+    await expectFailure(await h.send(), 429, "too_many_requests");
+    expect(
+      (await h.send(undefined, { "x-real-ip": "198.51.100.1" })).status,
+    ).toBe(200);
+  });
+
+  it("AC-10: after a restart (new key) a limited client starts fresh, the daily count stays", async () => {
+    await h.send();
+    for (let i = 1; i < RATE_LIMIT_MAX; i++) await h.send({ nope: 1 });
+    await expectFailure(await h.send(), 429, "too_many_requests");
+    const dailyCount = h.memory.snapshot().daily.count;
+
+    h.restart();
+
+    expect((await h.send()).status).toBe(200);
+    expect(h.memory.snapshot().daily.count).toBe(dailyCount + 1);
+  });
+
+  it("AC-15: a failing pseudonymization is the generic error and stores nothing about the client", async () => {
+    h.pseudonymize.mockImplementation(() => {
+      throw new Error(`hash failed for ${IP}`);
+    });
+
+    const response = await h.send();
+
+    await expectFailure(response.clone(), 500, "error");
+    expect(h.interpret).not.toHaveBeenCalled();
+    expect(h.memory.snapshot().clients).toEqual({});
+    expect(h.measurement).toHaveBeenCalledExactlyOnceWith({
+      result: "error",
+      durationMs: expect.any(Number),
+      clientId: null,
+    });
+    expect(JSON.stringify([h.logs, await response.text()])).not.toContain(IP);
+  });
+
+  it("AC-13: a request without a client address is not hashed and stores nothing", async () => {
+    await expectFailure(
+      await h.send(undefined, { "x-real-ip": "" }),
+      500,
+      "error",
+    );
+
+    expect(h.pseudonymize).not.toHaveBeenCalled();
+    expect(h.memory.snapshot().clients).toEqual({});
+  });
+
+  it("FR-8: a request rejected by the guard is not hashed", async () => {
+    await h.send(undefined, { origin: "https://evil.test" });
+
+    expect(h.pseudonymize).not.toHaveBeenCalled();
   });
 });

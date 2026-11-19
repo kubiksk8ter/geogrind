@@ -24,7 +24,8 @@ Early development. Current features:
   regions, countries and protected areas are not. The highlight disappears as soon as the next command is sent, and fades out on its own 30 s after the map has reached it.
 - Server-side protection of the free services: input validation, a 10 s pause after each processed
   command (also an unsuccessful one), 10 commands per minute per IP address and a daily cap on AI calls; messages are shown in
-  the current language and switch with it
+  the current language and switch with it. IP addresses are never stored in readable form (see
+  [What the server stores](#what-the-server-stores)).
 - Side panel (control below the language switch) with two tabs, "History" and "Metrics". Full screen on
   phones (closes after picking a history entry), beside a narrowed map from 768 px width.
   - **History:** your successful commands (up to 50 entries). Clicking an entry moves the map there again and
@@ -34,11 +35,11 @@ Early development. Current features:
     visitors; only numbers are stored, never command text, place names or IP addresses. They are served by
     a read-only, same-origin `GET /api/metrics` and come from normal commands (no extra calls to Groq or
     Nominatim).
-    - *AI:* how much of the free Groq quota the app uses: the app's own daily cap of AI calls with the time
+    - _AI:_ how much of the free Groq quota the app uses: the app's own daily cap of AI calls with the time
       to the next UTC day, the tokens of the last AI request (input, output, total), the remaining requests
       (per day) and tokens (per minute) with live countdowns to their renewal, the day's token total (UTC
       day, all users) and the model in use.
-    - *Application:* a pie chart of today's command results (successful, unsupported, not found, too early,
+    - _Application:_ a pie chart of today's command results (successful, unsupported, not found, too early,
       too many commands, AI resting, error) with a legend of counts and percentages; median and 95th
       percentile processing time of the last hour with a sparkline; the load (commands in the last minute
       and hour, active clients, commands in progress); and a status light for the map (from this browser's
@@ -94,6 +95,26 @@ npm run build      # production build
 npm start          # run the production build
 ```
 
+## What the server stores
+
+The state file (`STATE_DIR/state.json`) holds the day's counters (AI calls, tokens, command
+results), a possible AI pause and one short-lived record per client for the limits.
+
+- A client is identified by its IPv4 address or the /64 prefix of its IPv6 address, which is
+  turned into a keyed hash (HMAC-SHA-256, `keyId~digest`) right after the request arrives. Only
+  this pseudonym reaches the limits, the state file and the metrics; the raw address is never
+  stored or logged.
+- The hash key is random, lives only in the server's memory (never on disk) and is destroyed at
+  the next UTC midnight, so at most 24 h; a restart also starts with a new key. Every write of the
+  state drops client records of other keys and plain IP addresses left by older versions.
+- A client record disappears at the latest 60 s after its last command (rate limit and cooldown
+  window). At midnight a timer destroys the key and clears all client records even without
+  traffic, and the server start (`src/instrumentation.ts`) clears records left by the previous run.
+- At the key change, rate limit and cooldown start empty for everyone; the daily cap is not
+  affected. The metrics may count a client twice in "active clients" for up to an hour after it.
+- While the key exists, the hash is pseudonymised (not anonymous) data. The hosting provider and a
+  reverse proxy may still see and log IP addresses; that is outside the app.
+
 ## Project structure
 
 ```
@@ -102,7 +123,9 @@ src/app/api/     Route Handlers of the command and metrics endpoints (wiring onl
 src/components/  React components, one folder per feature (map, language-switch, command-input,
                  history = store, storage and History tab, metrics = Metrics tab, side-panel = tabbed panel)
 src/map/         map engine interface, MapLibre implementation (incl. highlight layers, tile availability), map config
-src/server/      server-only code: command pipeline, AI client, geocoder, limits state, metrics, env config
+src/server/      server-only code: command pipeline, AI client, geocoder, limits state, metrics, env config,
+                 privacy (client-id hashing key, state purge, key-expiry cleanup)
+src/instrumentation.ts  server start hook: clears client records left by the previous run
 src/shared/      contracts shared by browser and server (action list, schemas, text rules, metrics contract)
 src/config/      app-wide constants
 src/i18n/        routing, request config, typed messages, client locale provider

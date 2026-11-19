@@ -9,6 +9,7 @@ import type { AiClient } from "../ai/types";
 import type { AppEnv } from "../config/env";
 import type { Geocoder } from "../geocoding/types";
 import type { CommandMeasurementRecorder } from "../metrics/app/commandMeasurement";
+import type { Pseudonymizer } from "../privacy/clientKeyring";
 import type { CommandLimits } from "../state/limits";
 import { runAction } from "./actionHandlers";
 import { resolveClientId } from "./clientIp";
@@ -35,11 +36,14 @@ export interface CommandHandlerDeps {
   log(entry: { code: string; durationMs: number; cause?: string }): void;
   /** Told once per processed command (not for `invalid_request`); never throws. */
   measurement: CommandMeasurementRecorder;
+  /** Applied right after the client id is resolved; nothing after it sees the raw id. */
+  pseudonymize: Pseudonymizer;
 }
 
 /** What `process` learnt on the way, for the log line and the measurement. */
 interface Report {
   cause?: string;
+  /** The client's pseudonym, never the raw id. */
   clientId?: string;
 }
 
@@ -72,8 +76,10 @@ export function createCommandHandler(deps: CommandHandlerDeps) {
     const guard = await guardRequest(request, env.appOrigins);
     if (!guard.ok) return failure("invalid_request", {}, guard.status);
 
-    const clientId = resolveClientId(request.headers, env.clientIpHeader);
-    if (!clientId) throw new MissingClientAddressError();
+    const rawClientId = resolveClientId(request.headers, env.clientIpHeader);
+    if (!rawClientId) throw new MissingClientAddressError();
+    // A failure here ends in the generic error; the raw id is never a fallback.
+    const clientId = deps.pseudonymize(rawClientId);
     report.clientId = clientId;
 
     const services = deps.createServices(env);

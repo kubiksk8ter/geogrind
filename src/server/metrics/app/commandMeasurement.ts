@@ -7,7 +7,7 @@ import type { CommandWindow } from "./commandWindow";
 export interface CommandMeasurement {
   result: ResultKey;
   durationMs: number;
-  /** The raw client id; the window digests it at once and nothing else keeps it. */
+  /** The client's pseudonym from the keyring (never the raw id); null without a client address. */
   clientId: string | null;
 }
 

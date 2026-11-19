@@ -1,5 +1,4 @@
 import "server-only";
-import { createHmac, randomBytes } from "node:crypto";
 import type { AppMetrics, ResultKey } from "@/shared/metricsContract";
 import { type Clock, systemClock } from "../../state/types";
 import type { CommandMeasurement } from "./commandMeasurement";
@@ -20,7 +19,7 @@ interface WindowRecord {
   at: number;
   durationMs: number;
   result: ResultKey;
-  /** A per-process pseudonym of the client, never the raw id. */
+  /** The client's pseudonym as the limits store it, never the raw id. */
   client: string | null;
 }
 
@@ -33,15 +32,6 @@ export type WindowSummary = {
 export interface CommandWindowOptions {
   clock?: Clock;
   capacity?: number;
-  /** Turns a client id into a pseudonym; the default is a keyed hash with a random key. */
-  digest?: (clientId: string) => string;
-}
-
-/** HMAC-SHA-256 with a key that exists only in this process; 96 bits are kept. */
-function createDigest(): (clientId: string) => string {
-  const key = randomBytes(32);
-  return (clientId) =>
-    createHmac("sha256", key).update(clientId).digest("base64url").slice(0, 16);
 }
 
 /** Nearest rank: the smallest value with at least `p` of all values at or below it. */
@@ -60,7 +50,6 @@ const ascending = (a: number, b: number) => a - b;
 export class CommandWindow {
   private readonly clock: Clock;
   private readonly capacity: number;
-  private readonly digest: (clientId: string) => string;
   private readonly records: WindowRecord[] = [];
   private next = 0;
   private readonly startedAt: number;
@@ -68,11 +57,9 @@ export class CommandWindow {
   constructor({
     clock = systemClock,
     capacity = DEFAULT_CAPACITY,
-    digest = createDigest(),
   }: CommandWindowOptions = {}) {
     this.clock = clock;
     this.capacity = capacity;
-    this.digest = digest;
     this.startedAt = clock.now();
   }
 
@@ -81,7 +68,8 @@ export class CommandWindow {
       at: this.clock.now(),
       durationMs: Math.max(0, Math.round(durationMs)),
       result,
-      client: clientId === null ? null : this.digest(clientId),
+      // Pseudonymised by the command handler with the shared key, so it is not hashed again.
+      client: clientId,
     };
     if (this.records.length < this.capacity) {
       this.records.push(entry);

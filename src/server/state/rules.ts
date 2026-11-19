@@ -56,7 +56,7 @@ function liveClient(client: ClientState, now: number): ClientState | null {
   return hasState ? live : null;
 }
 
-/** Drops everything that expired, so IPs and counters live no longer than the limits need. */
+/** Drops everything that expired, so client records and counters live no longer than the limits need. */
 export function pruneState(state: StateData, now: number): StateData {
   const today = dayOf(now);
   const clients: StateData["clients"] = {};

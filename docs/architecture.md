@@ -21,6 +21,7 @@
 - Client state: Zustand 5 (vanilla store + React hook) – tiny, testable outside React; holds the
   command history, mirrored to session storage (validated on load, quota-aware).
 - Server state: one JSON file on local disk behind a `StateStore` interface (single instance).
+  Client ids in it are keyed hashes (HMAC-SHA-256, key in memory only, rotated at UTC midnight).
 - `server-only` marks server modules so they cannot reach the browser bundle.
 
 ## Structure
@@ -31,7 +32,9 @@ src/components/  React components, one folder per feature (map, language-switch,
                  history = store, storage and History tab, side-panel = tabbed panel) with their hooks and tests
 src/map/         MapEngine interface, MapLibre implementation, map config
 src/app/api/     Route Handlers for the command and metrics endpoints (wiring only)
-src/server/      server-only code: command pipeline, ai, geocoding, state, metrics, config
+src/server/      server-only code: command pipeline, ai, geocoding, state, metrics, config,
+                 privacy (client-id keyring, state purge, key-expiry sweeper)
+src/instrumentation.ts  boot hook (Node runtime): cleans client data left by a previous run
 src/shared/      contracts shared by browser and server (action registry, schemas, text rules, time formatters)
 src/config/      app-wide constants (e.g. APP_NAME)
 src/i18n/        routing, request config, typed messages, client LocaleProvider, helpers
@@ -110,5 +113,10 @@ Other server env: `CLIENT_IP_HEADER`, `APP_ORIGIN`, `STATE_DIR`, `DAILY_CAP` (se
   from the geocoder's HTTP attempts; map status computed in the browser from tile events
   (React context); sibling group `app`; hand-written SVG charts –
   [design 010](design/010-sidebar-metrics-app.md)
+- Client IPs are hashed (keyed HMAC, `keyId~digest`) in the command handler before anything is
+  stored; the key lives in memory only and ends at UTC midnight; a `StateStore` decorator purges
+  records of other keys and legacy raw ids; an unref'd timer armed at key creation plus a boot
+  sweep from `instrumentation.ts` clean up even on an idle server –
+  [design 011](design/011-ip-hashing.md)
 - Tailwind CSS added at the user's request (supersedes "no Tailwind" in design 001); shared
   class sets live in `src/components/sharedConstants.ts`
