@@ -8,6 +8,10 @@ import {
 } from "./commandWindow";
 
 const MINUTE = 60_000;
+// Client ids reach the window already pseudonymised by the command handler (spec 011).
+const CLIENT_A = "keyId000~aaaaaaaaaaaaaaaa";
+const CLIENT_B = "keyId000~bbbbbbbbbbbbbbbb";
+const CLIENT_C = "keyId000~cccccccccccccccc";
 
 function setup(capacity?: number) {
   const clock = new FakeClock();
@@ -17,7 +21,7 @@ function setup(capacity?: number) {
     agoMs: number,
     durationMs = 500,
     result: ResultKey = "success",
-    clientId: string | null = "203.0.113.7",
+    clientId: string | null = CLIENT_A,
   ) => {
     const now = clock.now();
     clock.set(now - agoMs);
@@ -93,18 +97,18 @@ describe("CommandWindow load", () => {
 
   it("AC-6: three distinct clients in the last hour are 3 active clients", () => {
     const { window, recordAgo } = setup();
-    recordAgo(40 * MINUTE, 500, "success", "203.0.113.1");
-    recordAgo(20 * MINUTE, 500, "not_found", "203.0.113.2");
-    recordAgo(10 * MINUTE, 500, "wait", "203.0.113.3");
-    recordAgo(MINUTE, 500, "success", "203.0.113.1");
+    recordAgo(40 * MINUTE, 500, "success", CLIENT_A);
+    recordAgo(20 * MINUTE, 500, "not_found", CLIENT_B);
+    recordAgo(10 * MINUTE, 500, "wait", CLIENT_C);
+    recordAgo(MINUTE, 500, "success", CLIENT_A);
 
     expect(window.summary().load.activeClients).toBe(3);
   });
 
   it("a client seen only before the hour is not active", () => {
     const { window, recordAgo } = setup();
-    recordAgo(70 * MINUTE, 500, "success", "203.0.113.1");
-    recordAgo(MINUTE, 500, "success", "203.0.113.2");
+    recordAgo(70 * MINUTE, 500, "success", CLIENT_A);
+    recordAgo(MINUTE, 500, "success", CLIENT_B);
 
     expect(window.summary().load.activeClients).toBe(1);
   });
@@ -219,14 +223,12 @@ describe("CommandWindow memory and privacy", () => {
     expect(text).not.toContain("2001:db8::1");
   });
 
-  it("AC-7: the window keeps only a pseudonym, never the raw client id", () => {
-    const window = new CommandWindow();
-    window.record({
-      result: "success",
-      durationMs: 1,
-      clientId: "203.0.113.7",
-    });
+  it("spec 011 AC-9: the window counts the pseudonym it is given without hashing again", () => {
+    const { window, recordAgo } = setup();
+    recordAgo(MINUTE, 500, "success", CLIENT_A);
+    recordAgo(0, 500, "success", CLIENT_A);
 
-    expect(JSON.stringify(window)).not.toContain("203.0.113.7");
+    expect(JSON.stringify(window)).toContain(CLIENT_A);
+    expect(window.summary().load.activeClients).toBe(1);
   });
 });

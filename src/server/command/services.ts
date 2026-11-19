@@ -6,7 +6,7 @@ import { abortableSleep } from "../geocoding/requestSpacer";
 import { sharedAiFigures } from "../metrics/ai/aiFigures";
 import { createAiMetricsRecorder } from "../metrics/ai/aiMetricsRecorder";
 import { sharedNominatimStatus } from "../metrics/app/serviceStatus";
-import { createStateStore } from "../state/createStateStore";
+import { createScopedStateStore } from "../state/createScopedStateStore";
 import { CommandLimits } from "../state/limits";
 import { systemClock } from "../state/types";
 import type { CommandServices } from "./commandHandler";
@@ -32,7 +32,7 @@ function sharedGeocoder({ geocoderUrl, geocoderContact }: AppEnv) {
 }
 
 export function createServices(env: AppEnv): CommandServices {
-  const store = createStateStore(env);
+  const store = createScopedStateStore(env);
   const metrics = createAiMetricsRecorder({
     store,
     figures: sharedAiFigures(),

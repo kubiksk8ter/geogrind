@@ -1,6 +1,6 @@
 import "server-only";
 import type { AppEnv } from "../config/env";
-import { createStateStore } from "../state/createStateStore";
+import { createScopedStateStore } from "../state/createScopedStateStore";
 import { systemClock } from "../state/types";
 import { sharedAiFigures } from "./ai/aiFigures";
 import { sharedCommandWindow } from "./app/commandWindow";
@@ -9,7 +9,7 @@ import type { MetricsServices } from "./metricsHandler";
 
 export function createMetricsServices(env: AppEnv): MetricsServices {
   return {
-    store: createStateStore(env),
+    store: createScopedStateStore(env),
     figures: sharedAiFigures(),
     commandWindow: sharedCommandWindow(),
     nominatim: sharedNominatimStatus(),
