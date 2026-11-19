@@ -73,11 +73,12 @@ weaken a check or a test to make it pass.
 Update `README.md` (see *README*). Do not modify specs or designs.
 
 Bump the application version, once per spec you implement; you are the only agent who does it,
-and specs do not mention it. Increase the patch number of `version` in `package.json` and in
-the root entries of `package-lock.json` (e.g. `0.1.1` → `0.1.2`), for example with
-`npm version <next> --no-git-tag-version`; never touch dependency versions. After a release of
-`develop` to `main` the maintainer sets the version on `develop` to `1.1.0` and you continue
-from there (`1.1.1`, `1.1.2`, ...). Do not bump when you only return a *Blocking issues*
+and specs do not mention it. Increase the minor number and reset the patch to 0 in `version` in `package.json` and in
+the root entries of `package-lock.json` (e.g. `0.1.9` → `0.2.0`, then `0.3.0`), for example with
+`npm version <next> --no-git-tag-version`; never touch dependency versions. The patch number is
+reserved for the maintainer's hotfixes outside specs. After a release of `develop` to `main` the
+maintainer sets the version on `develop` to `1.1.0` and you continue from there (`1.2.0`,
+`1.3.0`, ...). Do not bump when you only return a *Blocking issues*
 response. Mention the new version in the summary.
 
 Then return a short summary: what was implemented (task IDs), files created or changed,
