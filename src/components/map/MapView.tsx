@@ -8,23 +8,29 @@ import type {
   MapTarget,
 } from "@/map";
 import { CommandInput } from "../command-input/CommandInput";
-import { useHistoryStore } from "../history/HistoryStoreProvider";
+import { useHistoryStore } from "../history/store/HistoryStoreProvider";
 import { LanguageSwitch } from "../language-switch/LanguageSwitch";
 import {
   FULL_SCREEN_CLASS_NAME,
   MAP_BESIDE_PANEL_CLASS_NAME,
 } from "../sharedConstants";
+import { DEFAULT_PANEL_TAB } from "../side-panel/panelTabs";
+import type { PanelTabId } from "../side-panel/panelTypes";
 import { SidePanel } from "../side-panel/SidePanel";
+import { focusTargetAfterNotice } from "../terms/focusAfterNotice";
+import { TermsNotice } from "../terms/TermsNotice";
 import { MapFailure } from "./MapFailure";
 import { MapAvailabilityContext } from "./mapAvailability";
 
 export function MapView({ createEngine }: { createEngine: CreateMapEngine }) {
   const t = useTranslations("map");
+  const sectionRef = useRef<HTMLElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
   const [engine, setEngine] = useState<MapEngine | null>(null);
   const [availability, setAvailability] = useState<MapAvailability>("unknown");
   const [panelOpen, setPanelOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<PanelTabId>(DEFAULT_PANEL_TAB);
   const addEntry = useHistoryStore((state) => state.addEntry);
   const setCommandInFlight = useHistoryStore(
     (state) => state.setCommandInFlight,
@@ -61,10 +67,21 @@ export function MapView({ createEngine }: { createEngine: CreateMapEngine }) {
 
   const clearHighlight = useCallback(() => engine?.clearHighlight(), [engine]);
 
+  const openTerms = useCallback(() => {
+    setActiveTab("terms");
+    setPanelOpen(true);
+  }, []);
+
+  const focusTargetOnNoticeClose = useCallback(
+    () => focusTargetAfterNotice(sectionRef.current),
+    [],
+  );
+
   if (failed) return <MapFailure />;
 
   return (
     <section
+      ref={sectionRef}
       className={`${FULL_SCREEN_CLASS_NAME} ${panelOpen ? MAP_BESIDE_PANEL_CLASS_NAME : ""}`}
       aria-label={t("label")}
     >
@@ -80,10 +97,16 @@ export function MapView({ createEngine }: { createEngine: CreateMapEngine }) {
         <SidePanel
           open={panelOpen}
           onOpenChange={setPanelOpen}
+          activeTab={activeTab}
+          onActiveTabChange={setActiveTab}
           controlSlot={engine?.controlsSlot ?? null}
           showResult={engine ? moveMap : null}
         />
       </MapAvailabilityContext>
+      <TermsNotice
+        onOpenTerms={openTerms}
+        focusTargetOnClose={focusTargetOnNoticeClose}
+      />
     </section>
   );
 }

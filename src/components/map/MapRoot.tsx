@@ -1,13 +1,16 @@
 "use client";
 
 import { createMapEngine } from "@/map/maplibre-engine";
-import { HistoryStoreProvider } from "../history/HistoryStoreProvider";
+import { HistoryStoreProvider } from "../history/store/HistoryStoreProvider";
+import { TermsAcknowledgementProvider } from "../terms/store/TermsAcknowledgementProvider";
 import { MapView } from "./MapView";
 
 export default function MapRoot() {
   return (
-    <HistoryStoreProvider>
-      <MapView createEngine={createMapEngine} />
-    </HistoryStoreProvider>
+    <TermsAcknowledgementProvider>
+      <HistoryStoreProvider>
+        <MapView createEngine={createMapEngine} />
+      </HistoryStoreProvider>
+    </TermsAcknowledgementProvider>
   );
 }

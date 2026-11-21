@@ -42,7 +42,8 @@
     "tabsLabel": "Sekce panelu",
     "tabs": {
       "history": "Historie",
-      "metrics": "Metriky"
+      "metrics": "Metriky",
+      "terms": "Podmínky"
     },
     "history": {
       "listLabel": "Historie příkazů",
@@ -126,6 +127,71 @@
           "available": "Služba je dostupná",
           "unavailable": "Služba není dostupná",
           "unknown": "Stav zatím není známý"
+        }
+      }
+    }
+  },
+  "terms": {
+    "notice": {
+      "title": "Vítejte v {appName}",
+      "points": {
+        "sensitiveData": "Do příkazů prosím nepište citlivé ani osobní údaje. Text příkazu zpracovává služba umělé inteligence a názvy míst mapová vyhledávací služba.",
+        "aiErrors": "Umělá inteligence se občas splete, proto berte výsledky na mapě jako orientační.",
+        "ipAddress": "Pro ochranu před přetížením a zneužitím dočasně zpracováváme vaši IP adresu, a to jen ve formě pseudonymu s klíčem, který se denně ruší."
+      },
+      "openTerms": "Podmínky a ochrana osobních údajů",
+      "confirm": "Rozumím"
+    },
+    "document": {
+      "title": "Podmínky užívání a zásady ochrany osobních údajů",
+      "version": "(verze {version})",
+      "sections": {
+        "about": {
+          "title": "O službě",
+          "text": "{appName} je bezplatná aplikace. Provozovatel: autor projektu, kontakt {contact}. Služba je poskytována „tak, jak je“, bez záruky dostupnosti, přesnosti ani vhodnosti pro konkrétní účel. Může být kdykoli omezena, změněna nebo ukončena."
+        },
+        "rules": {
+          "title": "Pravidla používání",
+          "text": "Aplikaci používejte přiměřeně. Počet příkazů je omezen (za minutu, mezi dvěma příkazy a za den pro všechny uživatele dohromady). Nepoužívejte automatizované hromadné dotazy a nepokoušejte se omezení obcházet. Provozovatel může přístup omezit."
+        },
+        "sensitiveData": {
+          "title": "Nezadávejte citlivé údaje",
+          "text": "Do příkazu nepište osobní, zdravotní ani jiné citlivé údaje a nic, co nemá být předáno třetím stranám. Text se odesílá externím službám (viz bod 6)."
+        },
+        "ai": {
+          "title": "Umělá inteligence není spolehlivá",
+          "text": "Příkazy vyhodnocuje model umělé inteligence. Může je pochopit špatně nebo odpovědět nepřesně. Místo na mapě a jeho obrys vycházejí z dat OpenStreetMap a mohou být neúplné nebo nesprávné. Nespoléhejte se na ně při rozhodnutích, která mají vliv na zdraví, bezpečí nebo majetek."
+        },
+        "server": {
+          "title": "Jaké údaje zpracováváme na serveru",
+          "items": {
+            "ipAddress": "IP adresa: z ní se hned po příchodu požadavku vytvoří pseudonym (hash s tajným klíčem). Surová IP adresa se neukládá ani nezapisuje do logů. Zpracování probíhá na základě oprávněného zájmu (ochrana služby před přetížením a zneužitím funkcí umělé inteligence).",
+            "key": "Klíč je jen v paměti serveru, nejpozději o půlnoci UTC (nejvýše po 24 hodinách) se ničí a při restartu serveru se vytvoří nový. Jde o pseudonymizaci, nikoli anonymizaci: dokud klíč existuje, lze pseudonym přiřadit k téže IP adrese.",
+            "records": "Záznam klienta pro omezení počtu příkazů se maže nejpozději 60 sekund po jeho posledním příkazu. Pseudonym je také v paměti přehledu provozu po dobu nejvýše jedné hodiny; po restartu je prázdný.",
+            "content": "Text příkazů na serveru neukládáme. Ukládáme jen souhrnné denní počty (volání AI, tokeny, výsledky příkazů), které neobsahují osobní údaje. Logy obsahují jen kód výsledku, dobu zpracování a název chyby.",
+            "host": "Hostitel serveru a případný reverzní proxy server mohou IP adresy zaznamenávat mimo kontrolu aplikace. [TODO]"
+          }
+        },
+        "recipients": {
+          "title": "Kam se údaje odesílají",
+          "items": {
+            "ai": "Text příkazu a jazyk rozhraní: poskytovateli umělé inteligence Groq (USA), který příkaz vyhodnotí. Předávání údajů do USA je ošetřeno standardními smluvními doložkami (SCC) v rámci podmínek poskytovatele.",
+            "geocoder": "Název místa: veřejné vyhledávací službě Nominatim (OpenStreetMap). Posílá se s identifikací provozovatele, nikoli s vaší IP adresou ani vaším pseudonymem.",
+            "map": "Mapový styl a dlaždice stahuje váš prohlížeč přímo ze služby OpenFreeMap. Ta proto vidí vaši IP adresu a běžné údaje o požadavku podle vlastních zásad.",
+            "tracking": "Nepoužíváme analytiku, reklamu ani sledovací nástroje."
+          }
+        },
+        "browser": {
+          "title": "Údaje ve vašem prohlížeči",
+          "text": "Používáme pouze technicky nezbytné údaje ve vašem prohlížeči. Historie příkazů (sessionStorage) se smaže se zavřením karty. Konec pauzy mezi příkazy a potvrzení těchto podmínek s číslem verze (localStorage) zůstávají, dokud je nesmažete. Volba jazyka je v cookie, která platí do konce relace prohlížeče. Nic z toho neslouží ke sledování a potvrzení se na server neodesílá."
+        },
+        "rights": {
+          "title": "Vaše práva",
+          "text": "Máte právo na přístup, výmaz, omezení zpracování a námitku proti zpracování a právo podat stížnost u Úřadu pro ochranu osobních údajů (<authority>www.uoou.cz</authority>). Po zničení klíče nelze pseudonym k vám přiřadit, a údaj proto už nelze vyhledat. Uplatnění práv: kontakt výše."
+        },
+        "changes": {
+          "title": "Změny",
+          "text": "Podmínky se mohou změnit. Při změně textu se upozornění zobrazí znovu."
         }
       }
     }

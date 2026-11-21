@@ -1,4 +1,4 @@
-import type { HistoryEntry } from "@/components/history/historyEntrySchema";
+import type { HistoryEntry } from "@/components/history/store/historyEntrySchema";
 
 /** A Map-based `Storage` that can be made to throw or to run out of space (test helper). */
 export class FakeStorage implements Storage {

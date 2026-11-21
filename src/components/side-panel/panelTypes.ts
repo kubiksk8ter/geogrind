@@ -9,9 +9,10 @@ export interface PanelTabContentProps {
   onActivated(): void;
 }
 
+/** Also the key of the tab's label in the messages "panel.tabs". */
+export type PanelTabId = keyof typeof messages.panel.tabs;
+
 export interface PanelTabDefinition {
-  id: string;
-  /** Key in the messages "panel.tabs". */
-  labelKey: keyof typeof messages.panel.tabs;
+  id: PanelTabId;
   Content: ComponentType<PanelTabContentProps>;
 }
