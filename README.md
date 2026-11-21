@@ -26,7 +26,12 @@ Early development. Current features:
   command (also an unsuccessful one), 10 commands per minute per IP address and a daily cap on AI calls; messages are shown in
   the current language and switch with it. IP addresses are never stored in readable form (see
   [What the server stores](#what-the-server-stores)).
-- Side panel (control below the language switch) with two tabs, "History" and "Metrics". Full screen on
+- Start-up notice (modal dialog) on the first visit: no sensitive data in commands, AI can be
+  wrong, the IP address is processed only as a pseudonym. It has its own CZ/EN switch and a link to
+  the Terms tab; "I understand", Escape and the link close it. The acknowledgement is kept in
+  local storage (`geogrind.termsAcknowledgement`) with the terms version only, never sent to the
+  server; a new version in `src/components/terms/termsConstants.ts` shows the notice again.
+- Side panel (control below the language switch) with three tabs, "History", "Metrics" and "Terms". Full screen on
   phones (closes after picking a history entry), beside a narrowed map from 768 px width.
   - **History:** your successful commands (up to 50 entries). Clicking an entry moves the map there again and
     shows the highlight without any request to the AI or the geocoder. The history stays in session storage
@@ -48,6 +53,11 @@ Early development. Current features:
     - After a server restart the last AI request, the limits, the hour window and the Nominatim status are
       unknown until the next command (hour figures say "since start" during the first hour); the day's
       token total, cap counter and command results are kept in the state file.
+  - **Terms:** the terms of use and privacy notice in Czech and English
+    ([spec 012](docs/specs/012-terms-and-privacy-notice.md)). Before going to production, fill in
+    the operator contact (`OPERATOR_CONTACT` in `src/components/terms/termsConstants.ts`) and the
+    server host note (`terms.document.sections.server.items.host` in `messages/*.json`), which
+    are still `[TODO]`; a substantive text change needs a new `TERMS_VERSION`.
 - Short colour transitions on the input focus border and the CZ/EN selection;
   disabled with the system "reduced motion" setting
 
@@ -114,6 +124,8 @@ results), a possible AI pause and one short-lived record per client for the limi
   affected. The metrics may count a client twice in "active clients" for up to an hour after it.
 - While the key exists, the hash is pseudonymised (not anonymous) data. The hosting provider and a
   reverse proxy may still see and log IP addresses; that is outside the app.
+- The visitor-facing description of this is the Terms tab
+  ([spec 012](docs/specs/012-terms-and-privacy-notice.md)); keep both in step when it changes.
 
 ## Project structure
 
@@ -121,7 +133,8 @@ results), a possible AI pause and one short-lived record per client for the limi
 src/app/         routes, layouts, global styles ([locale] segment)
 src/app/api/     Route Handlers of the command and metrics endpoints (wiring only)
 src/components/  React components, one folder per feature (map, language-switch, command-input,
-                 history = store, storage and History tab, metrics = Metrics tab, side-panel = tabbed panel)
+                 history = store, storage and History tab, metrics = Metrics tab, side-panel = tabbed panel,
+                 terms = start-up notice, acknowledgement store and Terms tab)
 src/map/         map engine interface, MapLibre implementation (incl. highlight layers, tile availability), map config
 src/server/      server-only code: command pipeline, AI client, geocoder, limits state, metrics, env config,
                  privacy (client-id hashing key, state purge, key-expiry cleanup)

@@ -13,10 +13,11 @@ import { LocaleProvider } from "@/i18n/LocaleProvider";
 import type { Locale } from "@/i18n/routing";
 import { FakeStorage, makeEntry } from "@/test/fakeStorage";
 import { stubMatchMedia } from "@/test/stubMatchMedia";
-import { HistoryStoreProvider } from "../history/HistoryStoreProvider";
-import type { HistoryEntry } from "../history/historyEntrySchema";
-import { createSessionHistoryStorage } from "../history/historyStorage";
-import { createHistoryStore } from "../history/historyStore";
+import { HistoryStoreProvider } from "../history/store/HistoryStoreProvider";
+import type { HistoryEntry } from "../history/store/historyEntrySchema";
+import { createSessionHistoryStorage } from "../history/store/historyStorage";
+import { createHistoryStore } from "../history/store/historyStore";
+import { DEFAULT_PANEL_TAB } from "./panelTabs";
 import { SidePanel, type SidePanelProps } from "./SidePanel";
 
 beforeEach(() => {
@@ -34,10 +35,13 @@ function Harness({
   showResult,
 }: Pick<SidePanelProps, "controlSlot" | "showResult">) {
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState(DEFAULT_PANEL_TAB);
   return (
     <SidePanel
       open={open}
       onOpenChange={setOpen}
+      activeTab={activeTab}
+      onActiveTabChange={setActiveTab}
       controlSlot={controlSlot}
       showResult={showResult}
     />
@@ -166,8 +170,25 @@ describe("opening and closing", () => {
       within(dialog)
         .getAllByRole("tab")
         .map((tab) => tab.textContent),
-    ).toEqual(["History", "Metrics"]);
+    ).toEqual(["History", "Metrics", "Terms"]);
   });
+
+  it.each([
+    ["en", ["History", "Metrics", "Terms"]],
+    ["cs", ["Historie", "Metriky", "Podmínky"]],
+  ] as const)(
+    "spec 012 AC-11: the Terms tab comes after the existing tabs in %s",
+    async (locale, labels) => {
+      setup({ locale });
+      const dialog = await open();
+
+      expect(
+        within(dialog)
+          .getAllByRole("tab")
+          .map((tab) => tab.textContent),
+      ).toEqual(labels);
+    },
+  );
 });
 
 describe("remembered tab", () => {

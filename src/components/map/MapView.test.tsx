@@ -15,9 +15,13 @@ import type { Bounds } from "@/shared/actions";
 import { FakeStorage } from "@/test/fakeStorage";
 import { makeSnapshot } from "@/test/metricsSnapshot";
 import { stubMatchMedia } from "@/test/stubMatchMedia";
-import { HistoryStoreProvider } from "../history/HistoryStoreProvider";
-import { createSessionHistoryStorage } from "../history/historyStorage";
-import { createHistoryStore } from "../history/historyStore";
+import { acknowledgedTermsStore, termsStore } from "@/test/termsStore";
+import { HistoryStoreProvider } from "../history/store/HistoryStoreProvider";
+import { createSessionHistoryStorage } from "../history/store/historyStorage";
+import { createHistoryStore } from "../history/store/historyStore";
+import { TermsAcknowledgementProvider } from "../terms/store/TermsAcknowledgementProvider";
+import type { TermsAcknowledgementStore } from "../terms/store/termsAcknowledgementStore";
+import { TERMS_VERSION } from "../terms/termsConstants";
 import { MapView } from "./MapView";
 
 beforeEach(() => {
@@ -49,17 +53,24 @@ function renderMap(
   locale: Locale,
   createEngine: CreateMapEngine,
   storage = new FakeStorage(),
+  terms: TermsAcknowledgementStore = acknowledgedTermsStore(),
 ) {
   return render(
     <LocaleProvider initialLocale={locale}>
-      <HistoryStoreProvider store={historyStore(storage)}>
-        <MapView createEngine={createEngine} />
-      </HistoryStoreProvider>
+      <TermsAcknowledgementProvider store={terms}>
+        <HistoryStoreProvider store={historyStore(storage)}>
+          <MapView createEngine={createEngine} />
+        </HistoryStoreProvider>
+      </TermsAcknowledgementProvider>
     </LocaleProvider>,
   );
 }
 
-function setup(locale: Locale = "cs", storage = new FakeStorage()) {
+function setup(
+  locale: Locale = "cs",
+  storage = new FakeStorage(),
+  terms?: TermsAcknowledgementStore,
+) {
   const destroy = vi.fn();
   const moveTo = vi.fn<MapEngine["moveTo"]>();
   const clearHighlight = vi.fn<MapEngine["clearHighlight"]>();
@@ -69,7 +80,7 @@ function setup(locale: Locale = "cs", storage = new FakeStorage()) {
     return { controlsSlot: fakeSlot(), moveTo, clearHighlight, destroy };
   });
   return {
-    ...renderMap(locale, createEngine, storage),
+    ...renderMap(locale, createEngine, storage, terms),
     calls,
     destroy,
     createEngine,
@@ -289,14 +300,276 @@ describe("MapView", () => {
       );
       rerender(
         <LocaleProvider initialLocale="en">
-          <HistoryStoreProvider store={historyStore()}>
-            <MapView createEngine={replacement} />
-          </HistoryStoreProvider>
+          <TermsAcknowledgementProvider store={acknowledgedTermsStore()}>
+            <HistoryStoreProvider store={historyStore()}>
+              <MapView createEngine={replacement} />
+            </HistoryStoreProvider>
+          </TermsAcknowledgementProvider>
         </LocaleProvider>,
       );
 
       await waitFor(() => expect(replacement).toHaveBeenCalledOnce());
       expect(mapLight()).toBe("Status not known yet");
+    });
+  });
+
+  describe("start-up notice (spec 012)", () => {
+    const noticeName = { cs: "Vítejte v GeoGrind", en: "Welcome to GeoGrind" };
+
+    function setupNotice(
+      locale: Locale = "en",
+      storage: Storage = new FakeStorage(),
+    ) {
+      const terms = termsStore(storage);
+      return { ...setup(locale, new FakeStorage(), terms), terms, storage };
+    }
+
+    const notice = () => screen.queryByRole("dialog");
+    const findNotice = (locale: Locale = "en") =>
+      screen.findByRole("dialog", { name: noticeName[locale] });
+
+    it.each([
+      ["cs", "Rozumím"],
+      ["en", "I understand"],
+    ] as const)(
+      "AC-1: on a first visit the notice opens in %s and the page behind is not operable",
+      async (locale, confirm) => {
+        setupNotice(locale);
+
+        const dialog = await findNotice(locale);
+
+        expect(within(dialog).getAllByRole("listitem")).toHaveLength(3);
+        expect(
+          within(dialog).getByRole("button", { name: confirm }),
+        ).toBeDefined();
+        await waitFor(() =>
+          expect(
+            screen
+              .getByRole("region", { hidden: true })
+              .closest("[aria-hidden='true'], [inert]"),
+          ).not.toBeNull(),
+        );
+      },
+    );
+
+    it("AC-1, AC-16: the notice has a name, its three points as the description and focus inside", async () => {
+      setupNotice("en");
+      const dialog = await findNotice();
+
+      const describedBy = dialog.getAttribute("aria-describedby") ?? "";
+      const description = document.getElementById(describedBy);
+      expect(description?.tagName).toBe("UL");
+      expect(description?.textContent).toContain("sensitive or personal data");
+      expect(description?.textContent).toContain("AI sometimes gets it wrong");
+      expect(description?.textContent).toContain("pseudonym");
+      await waitFor(() =>
+        expect(dialog.contains(document.activeElement)).toBe(true),
+      );
+    });
+
+    it("the notice shows no draft or legal-advice remark", async () => {
+      setupNotice("en");
+      const dialog = await findNotice();
+
+      expect(dialog.textContent).not.toMatch(/draft|legal advice/i);
+    });
+
+    it("AC-2, AC-16: “I understand” closes the notice, stores the version and moves focus to the command input", async () => {
+      const storage = new FakeStorage();
+      const first = setupNotice("en", storage);
+      const dialog = await findNotice();
+
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "I understand" }),
+      );
+
+      await waitFor(() => expect(notice()).toBeNull());
+      expect(storage.items.get("geogrind.termsAcknowledgement")).toContain(
+        TERMS_VERSION,
+      );
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByRole("textbox", { name: "Map command" }),
+        ),
+      );
+
+      first.unmount();
+      setupNotice("en", storage);
+      await act(async () => {});
+      expect(notice()).toBeNull();
+    });
+
+    it("AC-3: Escape closes the notice and stores the acknowledgement", async () => {
+      const { terms } = setupNotice("en");
+      await findNotice();
+
+      fireEvent.keyDown(document.activeElement ?? document.body, {
+        key: "Escape",
+      });
+
+      await waitFor(() => expect(notice()).toBeNull());
+      expect(terms.getState().acknowledgedVersion).toBe(TERMS_VERSION);
+    });
+
+    it("AC-4: a click outside the notice leaves it open", async () => {
+      const { terms } = setupNotice("en");
+      await findNotice();
+      const outside = [
+        ...document.querySelectorAll("[role='presentation']"),
+        screen.getByRole("region", { hidden: true }),
+      ];
+      expect(outside.length).toBeGreaterThan(1);
+
+      for (const element of outside) {
+        fireEvent.pointerDown(element);
+        fireEvent.mouseDown(element);
+        fireEvent.pointerUp(element);
+        fireEvent.click(element);
+      }
+      await act(async () => {});
+
+      expect(notice()).not.toBeNull();
+      expect(terms.getState().acknowledgedVersion).toBeNull();
+    });
+
+    it.each([
+      [false, "full screen below 768 px"],
+      [true, "beside the map from 768 px"],
+    ])(
+      "AC-5: the link closes the notice, stores it and opens the panel on the Terms tab (large: %s, %s)",
+      async (large) => {
+        stubMatchMedia({ large });
+        const { terms } = setupNotice("en");
+        const dialog = await findNotice();
+
+        fireEvent.click(
+          within(dialog).getByRole("button", { name: "Terms and privacy" }),
+        );
+
+        const panel = await screen.findByRole("dialog", { name: "Side panel" });
+        expect(notice()?.getAttribute("aria-label")).toBe("Side panel");
+        expect(terms.getState().acknowledgedVersion).toBe(TERMS_VERSION);
+        expect(
+          within(panel).getByRole("tab", { name: "Terms", selected: true }),
+        ).toBeDefined();
+        expect(
+          within(panel).getByRole("heading", {
+            name: "Terms of use and privacy notice",
+          }),
+        ).toBeDefined();
+        expect(
+          screen.getByRole("region", { name: "Map", hidden: true }).className,
+        ).toContain("md:w-[calc(100dvw-19rem)]");
+        await waitFor(() =>
+          expect(panel.contains(document.activeElement)).toBe(true),
+        );
+      },
+    );
+
+    it("AC-6: switching the language in the notice changes all its texts, keeps focus and both switches agree", async () => {
+      setupNotice("cs");
+      const dialog = await findNotice("cs");
+      const english = within(dialog).getByRole("radio", { name: "Angličtina" });
+      english.focus();
+
+      act(() => english.click());
+
+      expect(dialog.getAttribute("aria-labelledby")).not.toBeNull();
+      expect(
+        within(dialog).getByRole("heading", { name: noticeName.en }),
+      ).toBeDefined();
+      expect(
+        within(dialog).getByRole("button", { name: "I understand" }),
+      ).toBeDefined();
+      expect(
+        within(dialog).getByRole("button", { name: "Terms and privacy" }),
+      ).toBeDefined();
+      expect(dialog.textContent).not.toMatch(/Rozumím|citlivé/);
+      expect(document.activeElement).toBe(
+        within(dialog).getByRole("radio", { name: "English" }),
+      );
+      const mapSwitch = screen
+        .getAllByRole("radiogroup", { hidden: true })
+        .find((group) => !dialog.contains(group));
+      expect(
+        within(mapSwitch ?? document.body)
+          .getByRole("radio", { name: "English", hidden: true })
+          .getAttribute("aria-checked"),
+      ).toBe("true");
+      expect(window.location.pathname).toBe("/en");
+    });
+
+    it.each([
+      [true, false],
+      [false, true],
+    ])(
+      "AC-10: acknowledged %s, the notice is ever rendered: %s",
+      async (acknowledged, everRendered) => {
+        const storage = new FakeStorage();
+        if (acknowledged) termsStore(storage).getState().acknowledge();
+        const added: Node[] = [];
+        const collect = (records: MutationRecord[]) => {
+          for (const record of records) added.push(...record.addedNodes);
+        };
+        const observer = new MutationObserver(collect);
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        setupNotice("en", storage);
+        await act(async () => {});
+        collect(observer.takeRecords());
+        observer.disconnect();
+
+        const dialogAdded = added.some(
+          (node) =>
+            node instanceof Element &&
+            (node.matches("[role='dialog']") ||
+              node.querySelector("[role='dialog']") !== null),
+        );
+        expect(dialogAdded).toBe(everRendered);
+      },
+    );
+
+    it("AC-14: when the map fails, only the failure message is shown and no notice", async () => {
+      const { calls } = setupNotice("en");
+      await findNotice();
+
+      act(() => calls[0]?.onFailure("style"));
+
+      await waitFor(() => expect(notice()).toBeNull());
+      expect(screen.getByRole("alert")).toBeDefined();
+    });
+
+    it("AC-15: the acknowledgement makes no request and commands work as before", async () => {
+      const fetchMock = vi.fn(async () =>
+        Response.json({
+          ok: true,
+          result: {
+            action: "zoom_to_place",
+            bounds: [
+              [16.4, 49.1],
+              [16.7, 49.3],
+            ],
+          },
+          cooldownSeconds: 0,
+        }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+      const { moveTo } = setupNotice("en");
+      const dialog = await findNotice();
+
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "I understand" }),
+      );
+      await waitFor(() => expect(notice()).toBeNull());
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      const input = screen.getByRole("textbox");
+      fireEvent.change(input, { target: { value: "Zoom to Brno" } });
+      await act(async () => {
+        fireEvent.submit(input.closest("form") ?? input);
+      });
+      expect(fetchMock).toHaveBeenCalledOnce();
+      expect(moveTo).toHaveBeenCalledOnce();
     });
   });
 

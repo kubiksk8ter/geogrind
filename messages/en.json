@@ -42,7 +42,8 @@
     "tabsLabel": "Panel sections",
     "tabs": {
       "history": "History",
-      "metrics": "Metrics"
+      "metrics": "Metrics",
+      "terms": "Terms"
     },
     "history": {
       "listLabel": "Command history",
@@ -126,6 +127,71 @@
           "available": "Service is available",
           "unavailable": "Service is not available",
           "unknown": "Status not known yet"
+        }
+      }
+    }
+  },
+  "terms": {
+    "notice": {
+      "title": "Welcome to {appName}",
+      "points": {
+        "sensitiveData": "Please don't enter sensitive or personal data in your commands. The command text is processed by an AI service and place names by a map search service.",
+        "aiErrors": "AI sometimes gets it wrong, so treat the results on the map as a guide.",
+        "ipAddress": "To protect the service against overload and abuse we temporarily process your IP address, only as a pseudonym made with a key that is destroyed daily."
+      },
+      "openTerms": "Terms and privacy",
+      "confirm": "I understand"
+    },
+    "document": {
+      "title": "Terms of use and privacy notice",
+      "version": "(version {version})",
+      "sections": {
+        "about": {
+          "title": "About the service",
+          "text": "{appName} is a free application. Operator: the author of the project, contact {contact}. The service is provided “as is”, with no guarantee of availability, accuracy or fitness for any purpose. It may be limited, changed or ended at any time."
+        },
+        "rules": {
+          "title": "Rules of use",
+          "text": "Use the application reasonably. The number of commands is limited (per minute, between two commands and per day for all users together). Do not use automated bulk requests and do not try to bypass the limits. The operator may restrict access."
+        },
+        "sensitiveData": {
+          "title": "Do not enter sensitive data",
+          "text": "Do not write personal, health or other sensitive data in a command, or anything that must not be passed to third parties. The text is sent to external services (see section 6)."
+        },
+        "ai": {
+          "title": "AI is not reliable",
+          "text": "Commands are interpreted by an AI model. It may misunderstand a command or answer inaccurately. The place on the map and its outline come from OpenStreetMap data and may be incomplete or wrong. Do not rely on them for decisions that affect health, safety or property."
+        },
+        "server": {
+          "title": "What we process on the server",
+          "items": {
+            "ipAddress": "IP address: right after a request arrives it is turned into a pseudonym (a hash made with a secret key). The raw IP address is not stored or written to logs. The processing is based on legitimate interest (protecting the service against overload and abuse of the AI features).",
+            "key": "The key exists only in the server's memory. It is destroyed at the latest at midnight UTC (at most after 24 hours), and a new one is created when the server restarts. This is pseudonymisation, not anonymisation: while the key exists, the pseudonym can be matched to the same IP address.",
+            "records": "The client record used for the command limits is deleted at the latest 60 seconds after the client's last command. The pseudonym is also kept in the memory of the traffic overview for at most one hour; it is empty after a restart.",
+            "content": "We do not store the text of commands on the server. We store only daily totals (AI calls, tokens, command results), which contain no personal data. Logs contain only a result code, the processing time and an error name.",
+            "host": "The server host and any reverse proxy may record IP addresses outside the control of the application. [TODO]"
+          }
+        },
+        "recipients": {
+          "title": "Where data is sent",
+          "items": {
+            "ai": "The text of the command and the interface language go to the AI provider Groq (USA), which interprets the command. The transfer of data to the USA is covered by standard contractual clauses (SCC) within the provider's terms.",
+            "geocoder": "The place name goes to the public search service Nominatim (OpenStreetMap). It is sent with the operator's identification, not with your IP address or your pseudonym.",
+            "map": "Your browser downloads the map style and tiles directly from OpenFreeMap. That service therefore sees your IP address and the usual request data under its own policy.",
+            "tracking": "We use no analytics, advertising or tracking tools."
+          }
+        },
+        "browser": {
+          "title": "Data in your browser",
+          "text": "We use only technically necessary data in your browser. The command history (sessionStorage) is deleted when you close the tab. The end of the pause between commands and the acknowledgement of these terms with its version number (localStorage) stay until you delete them. The language choice is in a cookie that lasts until the end of the browser session. None of it is used for tracking, and the acknowledgement is not sent to the server."
+        },
+        "rights": {
+          "title": "Your rights",
+          "text": "You have the right of access, erasure, restriction and objection, and the right to complain to the Czech Office for Personal Data Protection (<authority>www.uoou.cz</authority>). After the key has been destroyed the pseudonym can no longer be matched to you, so the data can no longer be found. To exercise your rights, use the contact above."
+        },
+        "changes": {
+          "title": "Changes",
+          "text": "The terms may change. When the text changes, the notice is shown again."
         }
       }
     }

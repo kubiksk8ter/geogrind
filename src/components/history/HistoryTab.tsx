@@ -9,7 +9,7 @@ import {
 } from "../sharedConstants";
 import type { PanelTabContentProps } from "../side-panel/panelTypes";
 import { entryLabel } from "./entryLabel";
-import { useHistoryStore } from "./HistoryStoreProvider";
+import { useHistoryStore } from "./store/HistoryStoreProvider";
 import { useCurrentTime } from "./useCurrentTime";
 
 export function HistoryTab({ showResult, onActivated }: PanelTabContentProps) {

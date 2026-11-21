@@ -3,7 +3,6 @@
 import { Drawer } from "@base-ui/react/drawer";
 import { Tabs } from "@base-ui/react/tabs";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
 import { createPortal } from "react-dom";
 import {
   LARGE_SCREEN_QUERY,
@@ -13,13 +12,19 @@ import {
   SIDE_PANEL_WIDTH_CLASS_NAME,
   TRANSITION_CLASS_NAME,
 } from "../sharedConstants";
-import { PANEL_TABS } from "./panelTabs";
-import type { PanelTabContentProps } from "./panelTypes";
+import { PANEL_TABS, panelTabId } from "./panelTabs";
+import type { PanelTabContentProps, PanelTabId } from "./panelTypes";
 import { useMediaQuery } from "./useMediaQuery";
 
 export interface SidePanelProps {
   open: boolean;
   onOpenChange(open: boolean): void;
+  /**
+   * Id of the selected tab (see PANEL_TABS). Held by the caller, so that it survives the closed
+   * panel (the popup unmounts) and other parts of the page can open a given tab.
+   */
+  activeTab: PanelTabId;
+  onActiveTabChange(id: PanelTabId): void;
   /** Where the open control goes (the map's control stack); without it there is no control. */
   controlSlot: HTMLElement | null;
   showResult: PanelTabContentProps["showResult"];
@@ -32,13 +37,13 @@ export interface SidePanelProps {
 export function SidePanel({
   open,
   onOpenChange,
+  activeTab,
+  onActiveTabChange,
   controlSlot,
   showResult,
 }: SidePanelProps) {
   const t = useTranslations("panel");
   const large = useMediaQuery(LARGE_SCREEN_QUERY);
-  // Kept here, not in the tabs: the popup unmounts when the panel closes, this component does not.
-  const [activeTab, setActiveTab] = useState(PANEL_TABS[0]?.id);
 
   return (
     <Drawer.Root
@@ -82,7 +87,7 @@ export function SidePanel({
           >
             <PanelTabs
               activeTab={activeTab}
-              onActiveTabChange={setActiveTab}
+              onActiveTabChange={onActiveTabChange}
               showResult={showResult}
               onActivated={() => {
                 if (!large) onOpenChange(false);
@@ -96,8 +101,8 @@ export function SidePanel({
 }
 
 interface PanelTabsProps extends PanelTabContentProps {
-  activeTab: string | undefined;
-  onActiveTabChange(id: string | undefined): void;
+  activeTab: PanelTabId;
+  onActiveTabChange(id: PanelTabId): void;
 }
 
 function PanelTabs({
@@ -110,18 +115,21 @@ function PanelTabs({
   return (
     <Tabs.Root
       value={activeTab}
-      onValueChange={(value) => onActiveTabChange(String(value))}
+      onValueChange={(value) => {
+        const id = panelTabId(value);
+        if (id) onActiveTabChange(id);
+      }}
       className="flex min-h-0 flex-1 flex-col"
     >
       <div className="flex items-stretch justify-between border-b border-neutral-300">
-        <Tabs.List aria-label={t("tabsLabel")} className="flex">
+        <Tabs.List aria-label={t("tabsLabel")} className="flex min-w-0 flex-1">
           {PANEL_TABS.map((tab) => (
             <Tabs.Tab
               key={tab.id}
               value={tab.id}
-              className={`min-h-11 cursor-pointer px-4 text-sm font-semibold text-neutral-900 data-active:bg-neutral-900 data-active:text-white transition-[background-color,color,box-shadow] duration-300 ${MAP_CONTROL_FOCUS_INSET_CLASS_NAME} ${TRANSITION_CLASS_NAME}`}
+              className={`min-h-11 min-w-0 flex-1 basis-0 cursor-pointer px-3 text-sm font-semibold text-neutral-900 data-active:bg-neutral-900 data-active:text-white transition-[background-color,color,box-shadow] duration-300 ${MAP_CONTROL_FOCUS_INSET_CLASS_NAME} ${TRANSITION_CLASS_NAME}`}
             >
-              {t(`tabs.${tab.labelKey}`)}
+              {t(`tabs.${tab.id}`)}
             </Tabs.Tab>
           ))}
         </Tabs.List>
