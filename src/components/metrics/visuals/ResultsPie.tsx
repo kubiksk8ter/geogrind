@@ -57,7 +57,7 @@ export function ResultsPie({ results, locale }: ResultsPieProps) {
         role="img"
         aria-label={chartLabel}
         viewBox="0 0 100 100"
-        className="size-28 shrink-0 forced-color-adjust-none"
+        className="size-24 shrink-0 forced-color-adjust-none"
       >
         {pieSlices(entries, PIE).map(({ key, d }) => (
           <path
