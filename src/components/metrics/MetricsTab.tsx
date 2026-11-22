@@ -36,8 +36,7 @@ export function MetricsTab() {
         map={map}
         locale={locale}
       />
-      {/* Full width: cancels the horizontal padding of the panel. */}
-      <hr className="-mx-4 border-neutral-300 mt-4" />
+      <hr className="mt-4 border-neutral-300" />
       <AiMetricsView ai={snapshot.ai} now={now} locale={locale} />
     </>
   );
