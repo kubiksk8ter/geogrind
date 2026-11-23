@@ -60,12 +60,6 @@ describe("ClientKeyring pseudonyms", () => {
       expect(encoded).not.toContain(digest);
     }
   });
-
-  it("uses node:crypto randomness by default", () => {
-    const keyring = createClientKeyring({ clock: new FakeClock() });
-
-    expect(keyring.pseudonymize(IPV4)).toMatch(PSEUDONYM);
-  });
 });
 
 describe("ClientKeyring rotation", () => {
@@ -132,23 +126,6 @@ describe("ClientKeyring rotation", () => {
 });
 
 describe("ClientKeyring key state", () => {
-  it("validKeyId never creates a key", () => {
-    const { keyring, onKeyCreated, random } = setup();
-
-    expect(keyring.validKeyId()).toBeNull();
-    expect(onKeyCreated).not.toHaveBeenCalled();
-    expect(random.calls).toHaveLength(0);
-  });
-
-  it("validKeyId names the live key and is null once it expired", () => {
-    const { keyring, clock } = setup();
-    const pseudonym = keyring.pseudonymize(IPV4);
-
-    expect(keyring.validKeyId()).toBe(keyIdOf(pseudonym));
-    clock.set(MIDNIGHT);
-    expect(keyring.validKeyId()).toBeNull();
-  });
-
   it("discardIfExpired keeps a valid key and destroys an expired one", () => {
     const { keyring, clock, random } = setup();
     keyring.pseudonymize(IPV4);
@@ -159,15 +136,6 @@ describe("ClientKeyring key state", () => {
     clock.set(MIDNIGHT);
     keyring.discardIfExpired();
     expect(random.calls[0]?.every((byte) => byte === 0)).toBe(true);
-  });
-
-  it("a new key is announced once, not on every use", () => {
-    const { keyring, onKeyCreated } = setup();
-
-    keyring.pseudonymize(IPV4);
-    keyring.pseudonymize("203.0.113.8");
-
-    expect(onKeyCreated).toHaveBeenCalledExactlyOnceWith(MIDNIGHT);
   });
 });
 

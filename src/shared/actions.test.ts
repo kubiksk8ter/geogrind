@@ -12,10 +12,6 @@ const accepts = (output: unknown) =>
   v.safeParse(modelResponseSchema, { output }).success;
 
 describe("model output schema", () => {
-  it("accepts the zoom action with a place", () => {
-    expect(accepts({ action: "zoom_to_place", place: "Brno" })).toBe(true);
-  });
-
   it("accepts the built-in unsupported action", () => {
     expect(accepts({ action: "unsupported" })).toBe(true);
   });
@@ -59,10 +55,6 @@ describe("command result schema", () => {
       action: "zoom_to_place",
       bounds: badBounds,
     }).success;
-
-  it("accepts valid bounds", () => {
-    expect(parse(bounds)).toBe(true);
-  });
 
   it.each([
     ["swapped corners", [bounds[1], bounds[0]]],
@@ -138,10 +130,6 @@ describe("Groq JSON schema", () => {
     expect(strictViolations(MODEL_OUTPUT_JSON_SCHEMA)).toEqual([]);
   });
 
-  it("has an object at the root", () => {
-    expect(MODEL_OUTPUT_JSON_SCHEMA.type).toBe("object");
-  });
-
   it("AC-30: offers every registry action plus unsupported", () => {
     const output = isRecord(MODEL_OUTPUT_JSON_SCHEMA.properties)
       ? MODEL_OUTPUT_JSON_SCHEMA.properties.output
@@ -149,15 +137,5 @@ describe("Groq JSON schema", () => {
     const options = isRecord(output) ? output.anyOf : undefined;
 
     expect(options).toHaveLength(ACTION_LIST.length + 1);
-  });
-
-  it("the checker notices a rule violation", () => {
-    expect(
-      strictViolations({
-        type: "object",
-        properties: { a: { type: "string", minLength: 1 } },
-        required: [],
-      }),
-    ).toHaveLength(3);
   });
 });

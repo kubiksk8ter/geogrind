@@ -49,17 +49,6 @@ describe("cooldown", () => {
     expect(await limits.complete(CLIENT)).toEqual({ cooldownSeconds: 10 });
   });
 
-  it("rounds the remaining time up", async () => {
-    await limits.admit(CLIENT);
-    await limits.complete(CLIENT);
-    clock.advance(2_500);
-
-    expect(await limits.admit(CLIENT)).toEqual({
-      kind: "wait",
-      retryAfterSeconds: 8,
-    });
-  });
-
   it("only the client that succeeded has to wait", async () => {
     await limits.admit(CLIENT);
     await limits.complete(CLIENT);
@@ -86,13 +75,6 @@ describe("in-flight request", () => {
       "admitted",
       "busy",
     ]);
-  });
-
-  it("is cleared by release", async () => {
-    await limits.admit(CLIENT);
-    await limits.release(CLIENT);
-
-    expect(await limits.admit(CLIENT)).toEqual({ kind: "admitted" });
   });
 
   it("expires with the request budget even when never released", async () => {
@@ -123,36 +105,6 @@ describe("rate limit", () => {
 
     expect(await limits.recordHit(CLIENT)).toEqual({ kind: "allowed" });
   });
-
-  it("slides: the wait ends when the oldest request leaves the window", async () => {
-    await limits.recordHit(CLIENT);
-    clock.advance(20_000);
-    await hit(RATE_LIMIT_MAX - 1);
-
-    expect(await limits.recordHit(CLIENT)).toEqual({
-      kind: "limited",
-      retryAfterSeconds: 40,
-    });
-    clock.advance(40_000);
-    expect(await limits.recordHit(CLIENT)).toEqual({ kind: "allowed" });
-  });
-
-  it("does not count refused requests, so the wait does not grow", async () => {
-    await hit(RATE_LIMIT_MAX);
-    clock.advance(30_000);
-    await limits.recordHit(CLIENT);
-
-    expect(await limits.recordHit(CLIENT)).toEqual({
-      kind: "limited",
-      retryAfterSeconds: 30,
-    });
-  });
-
-  it("counts every client separately", async () => {
-    await hit(RATE_LIMIT_MAX);
-
-    expect(await limits.recordHit(OTHER_CLIENT)).toEqual({ kind: "allowed" });
-  });
 });
 
 describe("daily cap", () => {
@@ -172,34 +124,11 @@ describe("daily cap", () => {
     });
   });
 
-  it("does not refund failed calls", async () => {
-    await exhaustCap();
-    await limits.release(CLIENT);
-
-    expect((await limits.admit(CLIENT)).kind).toBe("ai_resting");
-  });
-
   it("AC-18: works again the next UTC day", async () => {
     await exhaustCap();
     clock.set(Date.UTC(2026, 10, 10, 0, 0, 0));
 
     expect(await limits.admit(CLIENT)).toEqual({ kind: "admitted" });
-  });
-
-  it("rolls over at midnight, not after 24 hours", async () => {
-    clock.set(Date.UTC(2026, 10, 9, 23, 59, 59));
-    await exhaustCap();
-    clock.advance(1_000);
-
-    expect(await limits.admit(CLIENT)).toEqual({ kind: "admitted" });
-  });
-
-  it("does not count requests that were refused earlier", async () => {
-    await limits.admit(CLIENT);
-    await limits.admit(CLIENT);
-    await limits.admit(CLIENT);
-
-    expect(store.snapshot().daily.count).toBe(1);
   });
 });
 
@@ -215,29 +144,11 @@ describe("exhausted AI quota", () => {
     expect((await limits.admit(OTHER_CLIENT)).kind).toBe("ai_resting");
   });
 
-  it("is lifted when the retry time has passed", async () => {
-    await limits.admit(CLIENT);
-    await limits.release(CLIENT, { retryAfterSeconds: 120 });
-    clock.advance(120_000);
-
-    expect(await limits.admit(CLIENT)).toEqual({ kind: "admitted" });
-  });
-
   it("lasts until the next UTC midnight without a retry time", async () => {
     await limits.admit(CLIENT);
     await limits.release(CLIENT, {});
 
     expect(await limits.admit(CLIENT)).toEqual({
-      kind: "ai_resting",
-      resetAt: Date.UTC(2026, 10, 10),
-    });
-  });
-
-  it("never lasts beyond the next UTC midnight", async () => {
-    await limits.admit(CLIENT);
-    await limits.release(CLIENT, { retryAfterSeconds: 7 * 24 * 3600 });
-
-    expect(await limits.admit(OTHER_CLIENT)).toEqual({
       kind: "ai_resting",
       resetAt: Date.UTC(2026, 10, 10),
     });

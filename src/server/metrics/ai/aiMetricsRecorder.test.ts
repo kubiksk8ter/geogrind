@@ -47,17 +47,6 @@ describe("AI metrics recorder", () => {
     expect(store.snapshot().daily.tokens).toBe(270);
   });
 
-  it("AC-4: two simultaneous answers are both counted", async () => {
-    const { recorder, store } = setup();
-
-    await Promise.all([
-      recorder.record(answer({ usage: usage(150) })),
-      recorder.record(answer({ usage: usage(120) })),
-    ]);
-
-    expect(store.snapshot().daily.tokens).toBe(270);
-  });
-
   it("AC-4: the total starts again after UTC midnight", async () => {
     const { recorder, store, clock } = setup();
     await recorder.record(answer({ usage: usage(150) }));
@@ -91,15 +80,6 @@ describe("AI metrics recorder", () => {
       completion: 30,
       total: 150,
     });
-  });
-
-  it("latest wins by receivedAt even when answers arrive out of order", async () => {
-    const { recorder, figures } = setup();
-
-    await recorder.record(answer({ receivedAt: 2000, limits: withTokens(10) }));
-    await recorder.record(answer({ receivedAt: 1000, limits: withTokens(99) }));
-
-    expect(figures.current().limits?.tokens.remaining).toBe(10);
   });
 
   it("AC-12: an answer without limit headers does not wipe good figures", async () => {

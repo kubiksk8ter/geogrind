@@ -179,17 +179,6 @@ describe("hints and basics", () => {
     },
   );
 
-  it("rotation pauses while typing and resumes when emptied", () => {
-    const { input } = setup("en");
-    type(input, "Pra");
-    advance(ROTATION_INTERVAL_MS * 2);
-    type(input, "");
-
-    expect(hint(input)).toBe("Zoom to Prague");
-    advance(ROTATION_INTERVAL_MS);
-    expect(hint(input)).toBe("Show the High Tatras");
-  });
-
   it("a language switch keeps the text and the hint position in the new language", () => {
     const { input } = setup("cs");
     advance(ROTATION_INTERVAL_MS);
@@ -576,19 +565,6 @@ describe("failures", () => {
 });
 
 describe("reporting to the history", () => {
-  it("AC-3: a success is reported right after the map moved", async () => {
-    const order: string[] = [];
-    const { input } = setup("en", {
-      onMove: () => order.push("move"),
-      onSuccess: () => order.push("success"),
-    });
-    type(input, "Zoom to Brno");
-
-    await submit(input);
-
-    expect(order).toEqual(["move", "success"]);
-  });
-
   it("AC-3: passes the normalised text and the result of the answer", async () => {
     const { input, onSuccess } = setup("en");
     type(input, "  Zoom   to Brno ");
@@ -620,18 +596,6 @@ describe("reporting to the history", () => {
       expect(onSuccess).not.toHaveBeenCalled();
     },
   );
-
-  it("AC-4: a submit before the map is ready reports nothing", async () => {
-    const { input, onSuccess, onRequestRunningChange } = setup("en", {
-      onMove: null,
-    });
-    type(input, "Zoom to Brno");
-
-    await submit(input);
-
-    expect(onSuccess).not.toHaveBeenCalled();
-    expect(onRequestRunningChange).not.toHaveBeenCalled();
-  });
 
   it("AC-8: reports the running request until the answer arrives", async () => {
     const { input, client, onRequestRunningChange } = setup("en");

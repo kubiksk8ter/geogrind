@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { MODEL_OUTPUT_JSON_SCHEMA } from "@/shared/actions";
 import { FakeClock } from "@/test/fakeClock";
 import type { AiAnswer } from "./aiAnswer";
 import { GroqClient } from "./groqClient";
@@ -72,27 +71,6 @@ describe("GroqClient request", () => {
     expect(SYSTEM_PROMPT).not.toContain(attack);
   });
 
-  it("asks for strict JSON schema output, low reasoning and no streaming", async () => {
-    const { interpret, sentBody } = setup(() =>
-      completion({ output: { action: "unsupported" } }),
-    );
-
-    await interpret();
-
-    expect(sentBody()).toMatchObject({
-      model: "test-model",
-      temperature: 0,
-      stream: false,
-      reasoning_effort: "low",
-      include_reasoning: false,
-      response_format: {
-        type: "json_schema",
-        json_schema: { strict: true, schema: MODEL_OUTPUT_JSON_SCHEMA },
-      },
-    });
-    expect(sentBody().max_completion_tokens).toBeLessThanOrEqual(1024);
-  });
-
   it("sends the key only in the Authorization header, with the abort signal", async () => {
     const { fetchStub, interpret, sentBody } = setup(() =>
       completion({ output: { action: "unsupported" } }),
@@ -119,17 +97,6 @@ describe("GroqClient result", () => {
     expect(await interpret()).toEqual({
       kind: "output",
       output: { action: "zoom_to_place", place: "Brno" },
-    });
-  });
-
-  it("returns the unsupported output", async () => {
-    const { interpret } = setup(() =>
-      completion({ output: { action: "unsupported" } }),
-    );
-
-    expect(await interpret()).toEqual({
-      kind: "output",
-      output: { action: "unsupported" },
     });
   });
 

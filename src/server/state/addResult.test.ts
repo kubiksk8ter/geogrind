@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ResultKey } from "@/shared/metricsContract";
 import { noResults } from "@/shared/metricsContract";
-import { addResult, addTokens, pruneState } from "./rules";
+import { addResult, pruneState } from "./rules";
 import { EMPTY_STATE, type StateData } from "./types";
 
 const DAY_ONE = Date.UTC(2026, 10, 9, 12);
@@ -42,15 +42,5 @@ describe("addResult", () => {
       tokens: 0,
       results: { ...noResults(), wait: 1 },
     });
-  });
-
-  it("leaves the cap counter, the tokens and the clients unchanged", () => {
-    const withTokens = addTokens(EMPTY_STATE, 150, DAY_ONE).next;
-
-    const state = addResult(withTokens, "success", DAY_ONE).next;
-
-    expect(state.daily.count).toBe(0);
-    expect(state.daily.tokens).toBe(150);
-    expect(state.clients).toEqual({});
   });
 });

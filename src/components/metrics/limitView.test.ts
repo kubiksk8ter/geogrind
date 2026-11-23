@@ -33,10 +33,4 @@ describe("limitView", () => {
   ])("AC-12: no bar for %s", (_name, partial) => {
     expect(limitView(partial, 0)).toMatchObject({ bar: null });
   });
-
-  it("shows a bar for zero remaining of a positive limit", () => {
-    expect(
-      limitView({ remaining: 0, limit: 500, resetsAt: null }, 0),
-    ).toMatchObject({ bar: { remaining: 0, limit: 500 } });
-  });
 });

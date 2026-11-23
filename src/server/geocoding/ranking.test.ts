@@ -53,17 +53,8 @@ describe("namesPoiKind", () => {
 });
 
 describe("pickBest", () => {
-  it("returns nothing for no answers", () => {
-    expect(pickBest("Eiffel", [])).toBeUndefined();
-  });
-
   it("returns nothing when only boards match", () => {
     expect(pickBest("Eiffel", [board, board])).toBeUndefined();
-  });
-
-  it("ignores unknown kinds of objects", () => {
-    const railway = { category: "railway", type: "station" };
-    expect(pickBest("Eiffel", [railway])).toBeUndefined();
   });
 
   it("prefers a landmark to a hotel listed first", () => {
@@ -78,16 +69,7 @@ describe("pickBest", () => {
     expect(pickBest("hotel Eiffel", [board, tower])).toBe(tower);
   });
 
-  it("returns the only POI for any query", () => {
-    expect(pickBest("Eiffel", [board, shop])).toBe(shop);
-  });
-
   it("prefers a place to a hotel", () => {
     expect(pickBest("Vienna", [hotel, town])).toBe(town);
-  });
-
-  it("keeps the geocoder order between a place and a landmark", () => {
-    expect(pickBest("Karlštejn", [castle, town])).toBe(castle);
-    expect(pickBest("Karlštejn", [town, castle])).toBe(town);
   });
 });

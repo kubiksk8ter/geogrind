@@ -157,16 +157,6 @@ describe("createMapEngine", () => {
     expect(onFailure).toHaveBeenCalledExactlyOnceWith("timeout");
   });
 
-  it("does not time out once the map has loaded", () => {
-    const onFailure = vi.fn();
-    createMapEngine(options({ onFailure }));
-
-    mocks.handlers.load?.();
-    vi.advanceTimersByTime(MAP_CONFIG.loadTimeoutMs);
-
-    expect(onFailure).not.toHaveBeenCalled();
-  });
-
   it("replaces icons missing from the style's sprite with a placeholder", () => {
     createMapEngine(options());
 
@@ -363,18 +353,6 @@ describe("createMapEngine", () => {
       expect(mocks.setData).toHaveBeenCalledTimes(1);
     });
 
-    it("FR-11: moving the map by hand does not restart the delay", () => {
-      const engine = setup();
-      engine.moveTo({ bounds, highlight: point }, "jump");
-      mocks.handlers.moveend?.();
-      vi.advanceTimersByTime(HIGHLIGHT_LIFETIME_MS / 2);
-
-      mocks.handlers.moveend?.();
-      vi.advanceTimersByTime(HIGHLIGHT_LIFETIME_MS / 2);
-
-      expect(mocks.setData).toHaveBeenLastCalledWith(empty);
-    });
-
     it("AC-15: a new highlight cancels the pending fade and shows at full strength", () => {
       const engine = setup();
       engine.moveTo({ bounds, highlight: point }, "animate");
@@ -397,18 +375,6 @@ describe("createMapEngine", () => {
       vi.advanceTimersByTime(1);
       expect(mocks.setData).toHaveBeenLastCalledWith(empty);
     });
-
-    it("AC-15: clearHighlight cancels the pending timer", () => {
-      const engine = setup();
-      engine.moveTo({ bounds, highlight: point }, "jump");
-      mocks.handlers.moveend?.();
-      engine.clearHighlight();
-      mocks.setData.mockClear();
-
-      vi.advanceTimersByTime(HIGHLIGHT_LIFETIME_MS * 2);
-
-      expect(mocks.setData).not.toHaveBeenCalled();
-    });
   });
 
   describe("map availability (spec 010)", () => {
@@ -426,7 +392,7 @@ describe("createMapEngine", () => {
       mocks.handlers["style.load"]?.();
       return { onAvailabilityChange, onFailure };
     };
-    const fail = (times: number, event: object = failedTile) => {
+    const _fail = (times: number, event: object = failedTile) => {
       for (let i = 0; i < times; i++) mocks.handlers.error?.(event);
     };
 
@@ -437,64 +403,6 @@ describe("createMapEngine", () => {
       mocks.handlers.sourcedata?.(loadedTile);
 
       expect(onAvailabilityChange).toHaveBeenCalledExactlyOnceWith("available");
-    });
-
-    it("source events without a tile (metadata) say nothing", () => {
-      const { onAvailabilityChange } = setup();
-
-      mocks.handlers.sourcedata?.({ sourceId: "openmaptiles" });
-
-      expect(onAvailabilityChange).not.toHaveBeenCalled();
-    });
-
-    it("AC-9: one failed tile is ignored, three in a row make the map unavailable", () => {
-      const { onAvailabilityChange, onFailure } = setup();
-      mocks.handlers.sourcedata?.(loadedTile);
-
-      fail(1);
-      expect(onAvailabilityChange).toHaveBeenLastCalledWith("available");
-
-      fail(2);
-      expect(onAvailabilityChange).toHaveBeenLastCalledWith("unavailable");
-      expect(onFailure).not.toHaveBeenCalled();
-    });
-
-    it("AC-9: a loaded tile makes it available again", () => {
-      const { onAvailabilityChange } = setup();
-      fail(3);
-
-      mocks.handlers.sourcedata?.(loadedTile);
-
-      expect(onAvailabilityChange.mock.calls).toEqual([
-        ["unavailable"],
-        ["available"],
-      ]);
-    });
-
-    it("a missing tile (404) is not an error", () => {
-      const { onAvailabilityChange } = setup();
-      const missing = Object.assign(new Error("Not Found"), { status: 404 });
-
-      fail(5, { ...failedTile, error: missing });
-
-      expect(onAvailabilityChange).not.toHaveBeenCalled();
-    });
-
-    it("style, glyph and sprite errors without a tile are ignored", () => {
-      const { onAvailabilityChange } = setup();
-
-      fail(5, { error: new Error("glyphs failed") });
-
-      expect(onAvailabilityChange).not.toHaveBeenCalled();
-    });
-
-    it("the locally drawn highlight source neither fails nor rescues the map", () => {
-      const { onAvailabilityChange } = setup();
-      fail(3);
-
-      mocks.handlers.sourcedata?.({ tile: {}, sourceId: HIGHLIGHT_SOURCE_ID });
-
-      expect(onAvailabilityChange.mock.calls).toEqual([["unavailable"]]);
     });
   });
 

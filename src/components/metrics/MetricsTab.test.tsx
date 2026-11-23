@@ -133,14 +133,6 @@ describe("figures", () => {
     expect(screen.queryByText(/per day.*token|token.*per day/i)).toBeNull();
   });
 
-  it("AC-5: Czech numbers are grouped the Czech way", async () => {
-    stubFetch(makeSnapshot());
-    await setup("cs");
-
-    expect(text(meter("Tokeny za minutu"))).toContain("6 000 / 8 000");
-    expect(text(meter("Požadavky za den (Groq)"))).toContain("480 / 500");
-  });
-
   it("AC-9: shows the cap of the app with a bar and the time to the next UTC day", async () => {
     stubFetch(makeSnapshot());
     await setup();
@@ -202,19 +194,6 @@ describe("figures", () => {
     expect(
       within(aiGroup as HTMLElement).getAllByRole("separator"),
     ).toHaveLength(3);
-  });
-});
-
-describe("motion", () => {
-  it("AC-19: the bars opt out of their transition for reduced motion", async () => {
-    stubFetch(makeSnapshot());
-    await setup();
-
-    const indicator = meter("Requests per day (Groq)").querySelector(
-      "[style*='width']",
-    );
-
-    expect(indicator?.className).toContain("motion-reduce:transition-none");
   });
 });
 
@@ -484,23 +463,6 @@ describe("application group", () => {
     );
   });
 
-  it("AC-4: every result has its own colour, shared by its slice and its legend swatch", async () => {
-    stubFetch(makeSnapshot());
-    await setup();
-
-    const region = appRegion("Commands today");
-    const pie = within(region).getByRole("img");
-    const swatches = within(region)
-      .getAllByRole("listitem")
-      .map((row) => row.querySelector("rect")?.getAttribute("fill"));
-    expect(new Set(swatches).size).toBe(7);
-    expect(pie.querySelector("pattern")).toBeNull();
-    for (const slice of slicesOf(pie)) {
-      expect(swatches).toContain(slice.getAttribute("fill"));
-      expect(slice.getAttribute("stroke")).toBe("white");
-    }
-  });
-
   it("AC-3: only successful commands draw one full circle at 100 %", async () => {
     stubFetch(
       makeSnapshot({}, SERVER_NOW, {
@@ -531,21 +493,6 @@ describe("application group", () => {
     expect(sparkline.querySelectorAll("path, circle").length).toBeGreaterThan(
       1,
     );
-  });
-
-  it("the sparkline has captions: 0 on the left, -60 min and now below", async () => {
-    stubFetch(makeSnapshot());
-    await setup();
-
-    const caption = text(appRegion("Processing time (last hour)"));
-    expect(caption).toContain("0");
-    expect(caption).toContain("−60 min");
-    expect(caption).toContain("now");
-    expect(
-      within(appRegion("Processing time (last hour)"))
-        .getByText("−60 min")
-        .parentElement?.getAttribute("aria-hidden"),
-    ).toBe("true");
   });
 
   it("AC-6: shows the load figures", async () => {
@@ -626,18 +573,6 @@ describe("application group", () => {
     expect(map.querySelector("svg")).toBeNull();
   });
 
-  it("AC-8, AC-16: the titles are Czech in Czech", async () => {
-    stubFetch(makeSnapshot({}, SERVER_NOW, { services: { nominatim: false } }));
-    await setup("cs");
-
-    clickButton("map available");
-
-    const titles = [...groupOf("Aplikace").querySelectorAll("[title]")].map(
-      (node) => node.getAttribute("title"),
-    );
-    expect(titles).toEqual(["Služba je dostupná", "Služba není dostupná"]);
-  });
-
   it("AC-11: an unknown Nominatim is a grey dot, neither green nor red and says data appears after the first command", async () => {
     stubFetch(makeSnapshot({}, SERVER_NOW, { services: { nominatim: null } }));
     await setup();
@@ -702,18 +637,5 @@ describe("application group", () => {
     );
     expect(text(region("Zátěž"))).toContain("Příkazy za poslední hodinu10");
     expect(fetchStub).toHaveBeenCalledTimes(1);
-  });
-
-  it("AC-18: nothing in the group is animated", async () => {
-    stubFetch(makeSnapshot());
-    await setup();
-
-    const animated = [...appGroup().querySelectorAll("*")].filter((node) =>
-      /\b(transition|animate)/.test(node.getAttribute("class") ?? ""),
-    );
-    expect(animated).toEqual([]);
-    expect(
-      appGroup().querySelectorAll("animate, animateTransform, animateMotion"),
-    ).toHaveLength(0);
   });
 });

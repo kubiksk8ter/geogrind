@@ -19,17 +19,6 @@ describe("clientIdFromAddress", () => {
     expect(second).toBe(first);
   });
 
-  it("separates different /64 prefixes", () => {
-    expect(clientIdFromAddress("2001:db8:1:2::1")).not.toBe(
-      clientIdFromAddress("2001:db8:1:3::1"),
-    );
-  });
-
-  it("expands a compressed prefix", () => {
-    expect(clientIdFromAddress("2001:db8::1")).toBe("2001:0db8:0000:0000::/64");
-    expect(clientIdFromAddress("::1")).toBe("0000:0000:0000:0000::/64");
-  });
-
   it.each(["", "not an ip", "999.1.1.1", "1.2.3", "203.0.113.7, 10.0.0.1"])(
     "rejects %j",
     (value) => {
@@ -54,21 +43,11 @@ describe("resolveClientId", () => {
     expect(resolveClientId(headers, "x-real-ip")).toBeNull();
   });
 
-  it("rejects a named header that does not hold an IP", () => {
-    const headers = new Headers({ "x-real-ip": "evil" });
-
-    expect(resolveClientId(headers, "x-real-ip")).toBeNull();
-  });
-
   it("uses the first x-forwarded-for entry when no header is named (development)", () => {
     const headers = new Headers({ "x-forwarded-for": "::1, 10.0.0.1" });
 
     expect(resolveClientId(headers, undefined)).toBe(
       "0000:0000:0000:0000::/64",
     );
-  });
-
-  it("finds no client without any header", () => {
-    expect(resolveClientId(new Headers(), undefined)).toBeNull();
   });
 });

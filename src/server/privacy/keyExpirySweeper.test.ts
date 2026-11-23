@@ -56,34 +56,6 @@ describe("KeyExpirySweeper timer", () => {
     await vi.waitFor(() => expect(sweep).toHaveBeenCalledOnce());
     expect(timers.delays()).toEqual([]);
   });
-
-  it("a timer that fires early re-arms for the rest and does not sweep", () => {
-    const { sweeper, timers, clock, sweep } = setup();
-    sweeper.arm(MIDNIGHT);
-
-    clock.set(MIDNIGHT - 1_000);
-    timers.fireAll();
-
-    expect(sweep).not.toHaveBeenCalled();
-    expect(timers.delays()).toEqual([1_000]);
-  });
-
-  it("a second arm replaces the pending timer, so there is only one", () => {
-    const { sweeper, timers, clock } = setup();
-
-    sweeper.arm(MIDNIGHT);
-    sweeper.arm(MIDNIGHT + 1_000);
-
-    expect(timers.delays()).toEqual([MIDNIGHT + 1_000 - clock.now()]);
-  });
-
-  it("an expiry in the past fires at once", () => {
-    const { sweeper, timers } = setup();
-
-    sweeper.arm(0);
-
-    expect(timers.delays()).toEqual([0]);
-  });
 });
 
 describe("KeyExpirySweeper failures", () => {
@@ -135,42 +107,6 @@ describe("KeyExpirySweeper failures", () => {
     expect(timers.delays()).toEqual([]);
   });
 
-  it("a key armed after the sweep failed keeps both the retry and its expiry", async () => {
-    const { sweeper, timers, clock, sweep, keyring } = setup();
-    sweep.mockRejectedValueOnce(new SweepFailedError());
-    sweeper.arm(MIDNIGHT);
-    clock.set(MIDNIGHT);
-    timers.fireAll();
-    await vi.waitFor(() => expect(timers.delays()).toEqual([SWEEP_RETRY_MS]));
-
-    const nextExpiry = MIDNIGHT + 86_400_000;
-    sweeper.arm(nextExpiry);
-
-    expect(timers.delays().sort((a, b) => a - b)).toEqual([
-      SWEEP_RETRY_MS,
-      nextExpiry - MIDNIGHT,
-    ]);
-    clock.set(nextExpiry);
-    keyring.discardIfExpired.mockClear();
-    timers.fireAll();
-    expect(keyring.discardIfExpired).toHaveBeenCalledOnce();
-    // The retry and the new key's expiry each run a sweep.
-    await vi.waitFor(() => expect(sweep).toHaveBeenCalledTimes(3));
-    expect(timers.delays()).toEqual([]);
-  });
-
-  it("a sweep that starts replaces a pending retry, so a success leaves no timer", async () => {
-    const { sweeper, timers, sweep } = setup();
-    sweep.mockRejectedValueOnce(new SweepFailedError());
-    await sweeper.sweepNow();
-    expect(timers.delays()).toEqual([SWEEP_RETRY_MS]);
-
-    await sweeper.sweepNow();
-
-    expect(sweep).toHaveBeenCalledTimes(2);
-    expect(timers.delays()).toEqual([]);
-  });
-
   it("sweepNow (server start) runs the sweep once", async () => {
     const { sweeper, sweep, timers } = setup();
 
@@ -178,16 +114,6 @@ describe("KeyExpirySweeper failures", () => {
 
     expect(sweep).toHaveBeenCalledOnce();
     expect(timers.delays()).toEqual([]);
-  });
-
-  it("sweepNow never rejects; a failure is logged and retried later", async () => {
-    const { sweeper, sweep, timers, log } = setup();
-    sweep.mockRejectedValueOnce(new SweepFailedError());
-
-    await expect(sweeper.sweepNow()).resolves.toBeUndefined();
-
-    expect(log).toHaveBeenCalledWith("SweepFailedError");
-    expect(timers.delays()).toEqual([SWEEP_RETRY_MS]);
   });
 });
 

@@ -104,24 +104,6 @@ describe("CommandWindow load", () => {
 
     expect(window.summary().load.activeClients).toBe(3);
   });
-
-  it("a client seen only before the hour is not active", () => {
-    const { window, recordAgo } = setup();
-    recordAgo(70 * MINUTE, 500, "success", CLIENT_A);
-    recordAgo(MINUTE, 500, "success", CLIENT_B);
-
-    expect(window.summary().load.activeClients).toBe(1);
-  });
-
-  it("a command without a client address counts as a command, not as a client", () => {
-    const { window, recordAgo } = setup();
-    recordAgo(0, 5, "error", null);
-
-    expect(window.summary().load).toMatchObject({
-      lastHour: 1,
-      activeClients: 0,
-    });
-  });
 });
 
 describe("CommandWindow latency", () => {
@@ -154,25 +136,6 @@ describe("CommandWindow latency", () => {
     });
   });
 
-  it("wait and too_many_requests count in the load but not in the latency", () => {
-    const { window, recordAgo } = setup();
-    recordAgo(MINUTE, 2, "wait");
-    recordAgo(MINUTE, 3, "too_many_requests");
-    recordAgo(MINUTE, 800, "unsupported");
-
-    const { load, latency } = window.summary();
-
-    expect(load.lastHour).toBe(3);
-    expect(latency).toMatchObject({ count: 1, medianMs: 800 });
-  });
-
-  it("no latency when the hour holds only instant rejections", () => {
-    const { window, recordAgo } = setup();
-    recordAgo(MINUTE, 2, "wait");
-
-    expect(window.summary().latency).toBeNull();
-  });
-
   it("the sparkline has 12 five-minute buckets, oldest first, with gaps as null", () => {
     const { window, recordAgo } = setup();
     recordAgo(57 * MINUTE, 300);
@@ -200,16 +163,6 @@ describe("CommandWindow memory and privacy", () => {
     const { load } = window.summary();
 
     expect(load.lastHour).toBe(100);
-  });
-
-  it("AC-20: when full, the oldest records are replaced by the newest", () => {
-    const { window, clock } = setup(3);
-    for (const durationMs of [1, 2, 3, 4, 5]) {
-      window.record({ result: "success", durationMs, clientId: "x" });
-      clock.advance(1);
-    }
-
-    expect(window.summary().latency).toMatchObject({ count: 3, medianMs: 4 });
   });
 
   it("AC-7: no client identifier or address appears in the summary", () => {

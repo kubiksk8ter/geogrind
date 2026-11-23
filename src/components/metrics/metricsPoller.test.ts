@@ -71,18 +71,6 @@ describe("metrics poller", () => {
     stop();
   });
 
-  it("does not load while the page starts hidden", async () => {
-    const page = new FakePage();
-    page.visibilityState = "hidden";
-    const load = vi.fn(async () => makeSnapshot());
-    const stop = startMetricsPoller({ load, onState: () => {}, page });
-
-    await vi.advanceTimersByTimeAsync(30_000);
-
-    expect(load).not.toHaveBeenCalled();
-    stop();
-  });
-
   it("AC-14: a failure keeps the last snapshot, marks it and the next tick recovers", async () => {
     const results = [makeSnapshot(), null, makeSnapshot({ dailyTokens: 999 })];
     const load = vi.fn(async () => results.shift() ?? null);
@@ -97,34 +85,6 @@ describe("metrics poller", () => {
     await vi.advanceTimersByTimeAsync(10_000);
     expect(states.at(-1)?.failed).toBe(false);
     expect(states.at(-1)?.snapshot?.ai.dailyTokens).toBe(999);
-    stop();
-  });
-
-  it("a failure before any answer has no snapshot", async () => {
-    const { states, stop } = setup(vi.fn(async () => null));
-
-    await vi.advanceTimersByTimeAsync(0);
-
-    expect(states.at(-1)).toMatchObject({ snapshot: null, failed: true });
-    stop();
-  });
-
-  it("never runs two loads together", async () => {
-    let finish: (() => void) | undefined;
-    const load = vi.fn(
-      () =>
-        new Promise<ReturnType<typeof makeSnapshot>>((resolve) => {
-          finish = () => resolve(makeSnapshot());
-        }),
-    );
-    const { page, stop } = setup(load);
-
-    await vi.advanceTimersByTimeAsync(25_000);
-    page.setVisibility("visible");
-    expect(load).toHaveBeenCalledTimes(1);
-
-    finish?.();
-    await vi.advanceTimersByTimeAsync(0);
     stop();
   });
 

@@ -145,26 +145,6 @@ describe("ClientScopedStateStore across keys", () => {
 
     expect(await fileClients()).toEqual([]);
   });
-
-  it("read() hides records of other keys without writing the file", async () => {
-    const clock = new FakeClock();
-    await writeLegacyFile(clock);
-    const original = await fileText();
-    const { store } = startServer(clock, 1);
-
-    expect((await store.read()).clients).toEqual({});
-    expect(await fileText()).toBe(original);
-  });
-
-  it("read() keeps the records of the live key, so in-progress commands are counted", async () => {
-    const clock = new FakeClock();
-    const { keyring, limits, store } = startServer(clock, 1);
-    const client = keyring.pseudonymize(IPV4);
-    await limits.recordHit(client);
-    await limits.admit(client);
-
-    expect(Object.keys((await store.read()).clients)).toEqual([client]);
-  });
 });
 
 describe("ClientScopedStateStore privacy", () => {

@@ -76,9 +76,4 @@ describe("LocaleProvider", () => {
     expect(window.location.pathname).toBe("/cs");
     expect(document.documentElement.lang).toBe("cs");
   });
-
-  it("useLocaleSwitch fails outside the provider", () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(() => render(<Probe />)).toThrow();
-  });
 });

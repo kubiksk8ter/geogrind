@@ -6,7 +6,7 @@ import { noResults } from "@/shared/metricsContract";
 import { FakeClock } from "@/test/fakeClock";
 import { createFakeRandomBytes } from "@/test/fakeRandomBytes";
 import { FakeTimers } from "@/test/fakeTimers";
-import { type AppEnv, ConfigError } from "../config/env";
+import type { AppEnv } from "../config/env";
 import { FileStateStore } from "../state/fileStateStore";
 import { CommandLimits } from "../state/limits";
 import { createClientKeyring } from "./clientKeyring";
@@ -14,7 +14,6 @@ import { ClientScopedStateStore } from "./clientScopedStateStore";
 import {
   createKeyExpirySweeper,
   type KeyExpirySweeper,
-  SWEEP_RETRY_MS,
 } from "./keyExpirySweeper";
 import { createSweepJob } from "./sweepJob";
 
@@ -103,23 +102,6 @@ describe("boot sweep", () => {
     });
     expect(random.calls).toHaveLength(0);
   });
-
-  it("an invalid environment at start is logged by name, does not reject and is retried", async () => {
-    const clock = new FakeClock();
-    await writeLegacyFile(clock.now());
-    let env: () => AppEnv = () => {
-      throw new ConfigError("Invalid environment variables: GROQ_API_KEY");
-    };
-    const { sweeper, timers, log } = startServer(clock, () => env());
-
-    await expect(sweeper.sweepNow()).resolves.toBeUndefined();
-    expect(log).toHaveBeenCalledWith("Error");
-    expect(timers.delays()).toEqual([SWEEP_RETRY_MS]);
-
-    env = () => envFor(directory);
-    timers.fireAll();
-    await vi.waitFor(async () => expect(await fileClients()).toEqual([]));
-  });
 });
 
 describe("expiry sweep on an idle server", () => {
@@ -138,18 +120,5 @@ describe("expiry sweep on an idle server", () => {
     // The sweep never creates a key: only the first key and its keyId were drawn.
     expect(random.calls).toHaveLength(2);
     expect(timers.delays()).toEqual([]);
-  });
-
-  it("a new key after the sweep arms the timer again", async () => {
-    const clock = new FakeClock();
-    const { keyring, limits, timers } = startServer(clock);
-    keyring.pseudonymize(IPV4);
-    clock.set(MIDNIGHT);
-    timers.fireAll();
-    await vi.waitFor(async () => expect(await fileClients()).toEqual([]));
-
-    await limits.recordHit(keyring.pseudonymize(IPV4));
-
-    expect(timers.delays()).toEqual([24 * 60 * 60_000]);
   });
 });

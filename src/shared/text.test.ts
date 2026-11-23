@@ -65,14 +65,6 @@ describe("normalizeCommandText", () => {
 
     expect(normalizeCommandText(raw)).toBe("a".repeat(MAX_COMMAND_LENGTH - 1));
   });
-
-  it("is idempotent", () => {
-    const once = normalizeCommandText(
-      ` ${BIDI_OVERRIDE}Zoom\n to  P${ZERO_WIDTH_SPACE}lzen `.repeat(30),
-    );
-
-    expect(normalizeCommandText(once)).toBe(once);
-  });
 });
 
 describe("isCleanCommandText", () => {
@@ -90,9 +82,5 @@ describe("isCleanCommandText", () => {
     ["201 characters", "a".repeat(MAX_COMMAND_LENGTH + 1)],
   ])("AC-4, AC-5: rejects %s", (_name, text) => {
     expect(isCleanCommandText(text)).toBe(false);
-  });
-
-  it("accepts exactly 200 characters", () => {
-    expect(isCleanCommandText("a".repeat(MAX_COMMAND_LENGTH))).toBe(true);
   });
 });

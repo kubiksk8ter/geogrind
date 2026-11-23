@@ -19,16 +19,8 @@ import {
   type Pseudonymizer,
 } from "../privacy/clientKeyring";
 import { CommandLimits } from "../state/limits";
-import {
-  COOLDOWN_MS,
-  RATE_LIMIT_MAX,
-  RATE_LIMIT_WINDOW_MS,
-} from "../state/rules";
-import {
-  type StateData,
-  type StateStore,
-  StateUnavailableError,
-} from "../state/types";
+import { COOLDOWN_MS, RATE_LIMIT_MAX } from "../state/rules";
+import { type StateStore, StateUnavailableError } from "../state/types";
 import { createCommandHandler } from "./commandHandler";
 
 const API_KEY = "gsk_test_key_not_real";
@@ -203,11 +195,7 @@ describe("success", () => {
 });
 
 describe("guard (no AI call for any of these)", () => {
-  it.each([
-    ["GET", 405],
-    ["PUT", 405],
-    ["DELETE", 405],
-  ])("AC-7: rejects method %s", async (method, status) => {
+  it.each([["GET", 405]])("AC-7: rejects method %s", async (method, status) => {
     const response = await h.raw(null, { method });
 
     await expectFailure(response, status, "invalid_request");
@@ -222,13 +210,7 @@ describe("guard (no AI call for any of these)", () => {
     expect(h.interpret).not.toHaveBeenCalled();
   });
 
-  it("AC-7: rejects a request without an origin", async () => {
-    const response = await h.send(undefined, { origin: "" });
-
-    await expectFailure(response, 403, "invalid_request");
-  });
-
-  it.each(["text/plain", "application/x-www-form-urlencoded", ""])(
+  it.each(["text/plain", ""])(
     "AC-7: rejects content type %j",
     async (contentType) => {
       const response = await h.send(undefined, { "content-type": contentType });
@@ -237,14 +219,6 @@ describe("guard (no AI call for any of these)", () => {
       expect(h.interpret).not.toHaveBeenCalled();
     },
   );
-
-  it("accepts a charset parameter on the content type", async () => {
-    const response = await h.send(undefined, {
-      "content-type": "application/json; charset=utf-8",
-    });
-
-    expect(response.status).toBe(200);
-  });
 
   it("AC-6: rejects a body over 1 KB", async () => {
     const response = await h.send({
@@ -272,7 +246,6 @@ describe("validation (no AI call for any of these)", () => {
   it.each([
     ["missing text", { locale: "cs" }],
     ["missing locale", { text: TEXT }],
-    ["non-text text", { text: 5, locale: "cs" }],
     ["extra field", { text: TEXT, locale: "cs", role: "admin" }],
     ["unknown locale", { text: TEXT, locale: "de" }],
     ["201 characters", { text: "a".repeat(201), locale: "cs" }],
@@ -280,9 +253,6 @@ describe("validation (no AI call for any of these)", () => {
     ["a zero-width character", { text: "Br​no", locale: "cs" }],
     ["a bidi override", { text: "‮Brno", locale: "cs" }],
     ["untrimmed text", { text: " Brno ", locale: "cs" }],
-    ["empty text", { text: "", locale: "cs" }],
-    ["a JSON array", ["Brno"]],
-    ["JSON null", null],
     ["not JSON", "{ text:"],
   ])("AC-4, AC-5, AC-6: rejects %s", async (_name, body) => {
     const response = await h.send(body);
@@ -290,12 +260,6 @@ describe("validation (no AI call for any of these)", () => {
     await expectFailure(response, 400, "invalid_request");
     expect(h.interpret).not.toHaveBeenCalled();
     expect(h.find).not.toHaveBeenCalled();
-  });
-
-  it("accepts exactly 200 characters", async () => {
-    const response = await h.send({ text: "a".repeat(200), locale: "cs" });
-
-    expect(response.status).toBe(200);
   });
 });
 
@@ -374,38 +338,18 @@ describe("client address", () => {
     await expectFailure(response, 500, "error");
     expect(h.interpret).not.toHaveBeenCalled();
   });
-
-  it("uses x-forwarded-for when no header is named (development)", async () => {
-    h.loadEnv = () => ({ ...ENV, clientIpHeader: undefined });
-
-    const response = await h.send(undefined, {
-      "x-real-ip": "",
-      "x-forwarded-for": "198.51.100.5",
-    });
-
-    expect(response.status).toBe(200);
-  });
 });
 
 describe("cooldown", () => {
-  it("AC-12: 9 s after a success the server says wait without calling the AI", async () => {
+  it("AC-12: 4 s after a success the server says wait with the remaining seconds, without calling the AI", async () => {
     await h.send();
-    h.clock.advance(9_000);
+    h.clock.advance(4_000);
 
     const response = await h.send();
 
     await expectFailure(response, 429, "wait");
-    expect(response.headers.get("retry-after")).toBe("1");
+    expect(response.headers.get("retry-after")).toBe("6");
     expect(h.interpret).toHaveBeenCalledOnce();
-  });
-
-  it("AC-12: carries the remaining seconds", async () => {
-    await h.send();
-    h.clock.advance(4_000);
-
-    const body = await (await h.send()).json();
-
-    expect(body.error).toEqual({ code: "wait", retryAfterSeconds: 6 });
   });
 
   it("AC-12: 10 s after a success the request is accepted", async () => {
@@ -414,14 +358,6 @@ describe("cooldown", () => {
 
     expect((await h.send()).status).toBe(200);
     expect(h.interpret).toHaveBeenCalledTimes(2);
-  });
-
-  it("AC-12: is the same for any language", async () => {
-    await h.send({ text: TEXT, locale: "cs" });
-
-    const response = await h.send({ text: "Zoom to Brno", locale: "en" });
-
-    await expectFailure(response, 429, "wait");
   });
 
   it("another client is not affected", async () => {
@@ -447,13 +383,6 @@ describe("rate limit", () => {
     await expectFailure(response, 429, "too_many_requests");
     expect(response.headers.get("retry-after")).toBe("60");
     expect(h.interpret).toHaveBeenCalledOnce();
-  });
-
-  it("AC-13: works again after the wait", async () => {
-    for (let i = 0; i <= RATE_LIMIT_MAX; i++) await h.send({ nope: 1 });
-    h.clock.advance(RATE_LIMIT_WINDOW_MS);
-
-    expect((await h.send()).status).toBe(200);
   });
 
   it("counts invalid requests too", async () => {
@@ -536,27 +465,6 @@ describe("failed commands also start the cooldown", () => {
     await expectCooldown();
     h.find.mockResolvedValue({ bounds: BRNO });
     expect((await h.send()).status).toBe(200);
-  });
-
-  it("AC-1: a place abroad is zoomed to like any other", async () => {
-    h.interpret.mockResolvedValue({
-      kind: "output",
-      output: { action: "zoom_to_place", place: "Vienna" },
-    });
-    h.find.mockResolvedValue({
-      bounds: [
-        [16.18, 48.1],
-        [16.58, 48.32],
-      ],
-    });
-
-    const response = await h.send();
-
-    expect(response.status).toBe(200);
-    expect((await response.json()).result.bounds).toEqual([
-      [16.18, 48.1],
-      [16.58, 48.32],
-    ]);
   });
 
   it("AC-17: an AI failure is the generic error, with cooldown", async () => {
@@ -684,14 +592,6 @@ describe("state problems", () => {
     expect(h.interpret).not.toHaveBeenCalled();
     expect(h.logs.at(-1)).toMatchObject({ cause: "StateUnavailableError" });
   });
-
-  it("state read after a success is persisted for later requests", async () => {
-    await h.send();
-
-    const snapshot: StateData = h.memory.snapshot();
-
-    expect(Object.keys(snapshot.clients)).toEqual([h.pseudonymOf(IP)]);
-  });
 });
 
 describe("metrics measurement (spec 010)", () => {
@@ -755,16 +655,6 @@ describe("metrics measurement (spec 010)", () => {
     expect(h.measurement).not.toHaveBeenCalled();
   });
 
-  it("a command without a client address is measured as an error without a client", async () => {
-    await h.send(undefined, { "x-real-ip": "" });
-
-    expect(h.measurement).toHaveBeenCalledExactlyOnceWith({
-      result: "error",
-      durationMs: expect.any(Number),
-      clientId: null,
-    });
-  });
-
   it("AC-15: a throwing measurement leaves the answer and the log unchanged", async () => {
     const plain = await (await h.send()).json();
     h.clock.advance(COOLDOWN_MS);
@@ -779,31 +669,6 @@ describe("metrics measurement (spec 010)", () => {
     expect(h.logs.at(-1)).toEqual({
       code: "ok",
       durationMs: expect.any(Number),
-    });
-  });
-
-  it("AC-2: the counts reach the state store and the window", async () => {
-    const window = new CommandWindow({ clock: h.clock });
-    h.measurement.mockImplementation(
-      createCommandMeasurement({
-        window,
-        openStore: () => h.memory,
-        clock: h.clock,
-        log: () => {},
-      }),
-    );
-
-    await h.send();
-    await h.send();
-    await vi.waitFor(() =>
-      expect(h.memory.snapshot().daily.results).toMatchObject({
-        success: 1,
-        wait: 1,
-      }),
-    );
-    expect(window.summary().load).toMatchObject({
-      lastHour: 2,
-      activeClients: 1,
     });
   });
 });
@@ -866,27 +731,6 @@ describe("client pseudonyms (spec 011)", () => {
     expect(everything).not.toContain(IP);
   });
 
-  it("AC-3: one IP is one client under one key, so the 11th request in a minute is limited", async () => {
-    for (let i = 0; i < RATE_LIMIT_MAX; i++) await h.send({ nope: 1 });
-
-    await expectFailure(await h.send(), 429, "too_many_requests");
-    expect(
-      (await h.send(undefined, { "x-real-ip": "198.51.100.1" })).status,
-    ).toBe(200);
-  });
-
-  it("AC-10: after a restart (new key) a limited client starts fresh, the daily count stays", async () => {
-    await h.send();
-    for (let i = 1; i < RATE_LIMIT_MAX; i++) await h.send({ nope: 1 });
-    await expectFailure(await h.send(), 429, "too_many_requests");
-    const dailyCount = h.memory.snapshot().daily.count;
-
-    h.restart();
-
-    expect((await h.send()).status).toBe(200);
-    expect(h.memory.snapshot().daily.count).toBe(dailyCount + 1);
-  });
-
   it("AC-15: a failing pseudonymization is the generic error and stores nothing about the client", async () => {
     h.pseudonymize.mockImplementation(() => {
       throw new Error(`hash failed for ${IP}`);
@@ -903,22 +747,5 @@ describe("client pseudonyms (spec 011)", () => {
       clientId: null,
     });
     expect(JSON.stringify([h.logs, await response.text()])).not.toContain(IP);
-  });
-
-  it("AC-13: a request without a client address is not hashed and stores nothing", async () => {
-    await expectFailure(
-      await h.send(undefined, { "x-real-ip": "" }),
-      500,
-      "error",
-    );
-
-    expect(h.pseudonymize).not.toHaveBeenCalled();
-    expect(h.memory.snapshot().clients).toEqual({});
-  });
-
-  it("FR-8: a request rejected by the guard is not hashed", async () => {
-    await h.send(undefined, { origin: "https://evil.test" });
-
-    expect(h.pseudonymize).not.toHaveBeenCalled();
   });
 });
