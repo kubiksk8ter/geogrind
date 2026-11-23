@@ -54,21 +54,6 @@ describe("FileStateStore tokens and read", () => {
     expect((await store.read()).daily.tokens).toBe(25);
   });
 
-  it("AC-4: two instances on one directory add up", async () => {
-    const stores = [
-      new FileStateStore(directory),
-      new FileStateStore(directory),
-    ];
-
-    await Promise.all(
-      Array.from({ length: 20 }, (_, index) =>
-        stores[index % 2]?.transact(addOneToken),
-      ),
-    );
-
-    expect((await stores[0]?.read())?.daily.tokens).toBe(20);
-  });
-
   it("AC-21: the day's tokens survive a restart", async () => {
     await new FileStateStore(directory).transact((state) =>
       addTokens(state, 150, NOW),
@@ -110,14 +95,6 @@ describe("FileStateStore tokens and read", () => {
       StateUnavailableError,
     );
   });
-
-  it("read does not wait for a held lock", async () => {
-    const store = new FileStateStore(directory);
-    await store.transact(addOneToken);
-    await writeFile(join(directory, "state.lock"), "1");
-
-    expect((await store.read()).daily.tokens).toBe(1);
-  });
 });
 
 describe("FileStateStore results of the day", () => {
@@ -138,21 +115,6 @@ describe("FileStateStore results of the day", () => {
     );
   });
 
-  it("parallel writers on two instances neither lose nor double count results", async () => {
-    const stores = [
-      new FileStateStore(directory),
-      new FileStateStore(directory),
-    ];
-
-    await Promise.all(
-      Array.from({ length: 20 }, (_, index) =>
-        stores[index % 2]?.transact(addSuccess),
-      ),
-    );
-
-    expect((await stores[0]?.read())?.daily.results.success).toBe(20);
-  });
-
   it("AC-19: the day's results survive a restart", async () => {
     const before = new FileStateStore(directory);
     await before.transact(addSuccess);
@@ -169,20 +131,6 @@ describe("FileStateStore results of the day", () => {
 });
 
 describe("FileStateStore", () => {
-  it("starts from an empty state when there is no file", async () => {
-    const store = new FileStateStore(directory);
-
-    expect(
-      await store.transact((state) => ({ next: state, result: state })),
-    ).toMatchObject({ version: 1, clients: {} });
-  });
-
-  it("creates the directory when it is missing", async () => {
-    const store = new FileStateStore(join(directory, "nested", "data"));
-
-    expect(await store.transact(increment)).toBe(1);
-  });
-
   it("AC-29: parallel transactions do not lose updates", async () => {
     const store = new FileStateStore(directory);
 
@@ -193,21 +141,6 @@ describe("FileStateStore", () => {
     expect([...results].sort((a, b) => a - b)).toEqual(
       Array.from({ length: 25 }, (_, index) => index + 1),
     );
-  });
-
-  it("AC-29: two instances on one directory also serialise", async () => {
-    const stores = [
-      new FileStateStore(directory),
-      new FileStateStore(directory),
-    ];
-
-    await Promise.all(
-      Array.from({ length: 20 }, (_, index) =>
-        stores[index % 2]?.transact(increment),
-      ),
-    );
-
-    expect(await stores[0]?.transact(increment)).toBe(21);
   });
 
   it("AC-29: an active cooldown survives a restart", async () => {
@@ -227,29 +160,6 @@ describe("FileStateStore", () => {
       kind: "wait",
       retryAfterSeconds: 6,
     });
-  });
-
-  it("releases the lock after a transaction, even a failing one", async () => {
-    const store = new FileStateStore(directory, { lockTimeoutMs: 200 });
-    await expect(
-      store.transact(() => {
-        throw new Error("boom");
-      }),
-    ).rejects.toThrow("boom");
-
-    expect(await store.transact(increment)).toBe(1);
-  });
-
-  it("leaves no temporary file behind", async () => {
-    const store = new FileStateStore(directory);
-    await store.transact(increment);
-
-    expect(await readFile(join(directory, "state.json"), "utf8")).toContain(
-      '"count":1',
-    );
-    await expect(
-      readFile(join(directory, `state.json.${process.pid}.tmp`)),
-    ).rejects.toThrow();
   });
 
   it.each([

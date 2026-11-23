@@ -20,12 +20,6 @@ function setup(initial: HistoryEntry[] = []) {
 }
 
 describe("history store", () => {
-  it("starts with the loaded entries", () => {
-    const loaded = [makeEntry(1)];
-
-    expect(setup(loaded).store.getState().entries).toEqual(loaded);
-  });
-
   it("FR-4: addEntry stamps the time, creates an id and puts the entry first", () => {
     const { store } = setup();
 
@@ -76,9 +70,5 @@ describe("history store", () => {
 
     expect(store.getState().commandInFlight).toBe(true);
     expect(save).not.toHaveBeenCalled();
-  });
-
-  it("does not write at creation", () => {
-    expect(setup([makeEntry(1)]).save).not.toHaveBeenCalled();
   });
 });

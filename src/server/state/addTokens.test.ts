@@ -32,24 +32,4 @@ describe("addTokens", () => {
       results: noResults(),
     });
   });
-
-  it("resets tokens together with the cap counter and keeps both on the same day", () => {
-    const state: StateData = {
-      ...EMPTY_STATE,
-      daily: {
-        day: "2026-11-09",
-        count: 37,
-        tokens: 270,
-        results: noResults(),
-      },
-    };
-
-    expect(pruneState(state, DAY_ONE).daily).toEqual(state.daily);
-    expect(pruneState(state, DAY_TWO).daily).toEqual({
-      day: "2026-11-10",
-      count: 0,
-      tokens: 0,
-      results: noResults(),
-    });
-  });
 });

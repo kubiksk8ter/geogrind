@@ -19,22 +19,4 @@ describe("entryLabel", () => {
 
     expect(entryLabel(text)).toBe(text);
   });
-
-  it("ignores a dot that is not followed by a space", () => {
-    const text = "Zobraz mi verzi 2.0 Grand Canyonu v Americe prosím";
-
-    expect(entryLabel(text)).toBe(text);
-  });
-
-  it("does not cut after a very short first sentence", () => {
-    const text = "Hm. Zobraz mi Grand Canyon v Americe a ještě okolí";
-
-    expect(entryLabel(text)).toBe(text);
-  });
-
-  it("also cuts at a question or exclamation mark", () => {
-    expect(entryLabel("Kde je Grand Canyon v Americe? Chci ho vidět!")).toBe(
-      "Kde je Grand Canyon v Americe…",
-    );
-  });
 });

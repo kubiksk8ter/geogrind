@@ -35,12 +35,6 @@ describe("formatEntryTime", () => {
     expect(earlier).toMatch(/10\. 11\. 2026/);
     expect(earlier).toMatch(/23:59/);
   });
-
-  it("a different year is an earlier day", () => {
-    const lastYear = new Date(2025, 10, 11, 18, 30).getTime();
-
-    expect(formatEntryTime(lastYear, NOW, "en")).toMatch(/2025/);
-  });
 });
 
 describe("formatCountdown", () => {

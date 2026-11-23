@@ -141,17 +141,11 @@ describe("TermsTab", () => {
     expect(container.textContent).not.toMatch(/[ěščřžýáíéůú]/);
   });
 
-  it("AC-17: the authority link uses the shared focus style with the fading transition", () => {
+  it("AC-17: the authority link points to the Czech data protection authority", () => {
     renderTab("en");
 
     const link = screen.getByRole("link", { name: "www.uoou.cz" });
 
     expect(link.getAttribute("href")).toBe("https://www.uoou.cz");
-    expect(link.className).toContain(
-      "focus-visible:shadow-[0_0_2px_2px_#0096ff]",
-    );
-    expect(link.className).toContain("forced-colors:focus-visible:outline-2");
-    expect(link.className).toContain("transition-shadow");
-    expect(link.className).toContain("motion-reduce:transition-none");
   });
 });

@@ -99,6 +99,7 @@ per-IP limits cannot be trusted.
 npm install
 npm run dev        # development server at http://localhost:3000
 npm test           # unit tests (Vitest)
+npm run test:smoke # smoke tests in a real browser (Playwright, builds and starts the app)
 npm run lint       # Biome lint and format check
 npm run typecheck  # TypeScript check
 npm run build      # production build
@@ -139,6 +140,7 @@ src/map/         map engine interface, MapLibre implementation (incl. highlight 
 src/server/      server-only code: command pipeline, AI client, geocoder, limits state, metrics, env config,
                  privacy (client-id hashing key, state purge, key-expiry cleanup)
 src/instrumentation.ts  server start hook: clears client records left by the previous run
+e2e/             smoke tests (Playwright): map, start-up notice, command input, side panel, language switch
 src/shared/      contracts shared by browser and server (action list, schemas, text rules, metrics contract)
 src/config/      app-wide constants
 src/i18n/        routing, request config, typed messages, client locale provider
@@ -146,6 +148,18 @@ src/proxy.ts     locale redirect (next-intl)
 messages/        cs.json, en.json
 docs/            specs, designs, architecture
 ```
+
+## Continuous integration
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on pull requests and pushes to `develop` and `main`:
+
+- **checks:** `lint`, `typecheck`, `test` and `build`.
+- **smoke:** seven Playwright tests against the production build in Chromium (after `checks` passed). The
+  command endpoint is answered by the tests, so neither the AI nor the geocoder is called and no secrets are
+  needed; the map tiles are loaded from OpenFreeMap. Run them locally with `npm run test:smoke` (the first
+  time `npx playwright install chromium`). On failure the report is uploaded as an artifact.
+
+To protect a branch, require the `checks` and `smoke` status checks in the GitHub branch protection rules.
 
 ## Documentation
 

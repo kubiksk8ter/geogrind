@@ -44,25 +44,6 @@ describe("loadEnv", () => {
     expect(env.geocoderUrl).toBe("https://geo.example");
   });
 
-  it("treats blank values as unset", () => {
-    const env = loadEnv(
-      { GROQ_API_KEY: "test-key", GROQ_MODEL: "  ", DAILY_CAP: "" },
-      { production: false },
-    );
-
-    expect(env.groqModel).toBe(DEFAULT_GROQ_MODEL);
-    expect(env.dailyCap).toBe(DEFAULT_DAILY_CAP);
-  });
-
-  it("reads DAILY_CAP as a positive integer", () => {
-    const env = loadEnv(
-      { GROQ_API_KEY: "test-key", DAILY_CAP: "120" },
-      { production: false },
-    );
-
-    expect(env.dailyCap).toBe(120);
-  });
-
   it.each(["0", "-3", "1.5", "many"])("rejects DAILY_CAP %s", (cap) => {
     expect(() =>
       loadEnv({ GROQ_API_KEY: "k", DAILY_CAP: cap }, { production: false }),

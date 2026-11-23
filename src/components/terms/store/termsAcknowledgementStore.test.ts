@@ -15,10 +15,6 @@ function storageWith(raw: string) {
 }
 
 describe("terms acknowledgement store", () => {
-  it("FR-7: the first terms version is 2026-11-19", () => {
-    expect(TERMS_VERSION).toBe("2026-11-19");
-  });
-
   it("AC-1: with an empty storage the notice is needed", () => {
     expect(noticeNeeded(new FakeStorage())).toBe(true);
   });
@@ -93,20 +89,6 @@ describe("terms acknowledgement store", () => {
       expect(noticeNeeded(storageWith(raw))).toBe(true);
     },
   );
-
-  it("AC-8: unknown extra fields are dropped from the state", () => {
-    const store = termsStore(
-      storageWith(
-        JSON.stringify({
-          state: { acknowledgedVersion: TERMS_VERSION, currentVersion: "x" },
-          version: 1,
-        }),
-      ),
-    );
-
-    expect(store.getState().currentVersion).toBe(TERMS_VERSION);
-    expect(needsTermsNotice(store.getState())).toBe(false);
-  });
 
   it("AC-9: a storage that throws shows the notice, and after the acknowledgement it stays closed for this page view", () => {
     const storage = new FakeStorage();

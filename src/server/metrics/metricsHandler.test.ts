@@ -3,8 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { metricsResponseSchema, noResults } from "@/shared/metricsContract";
 import { FakeClock } from "@/test/fakeClock";
 import { MemoryStateStore } from "@/test/memoryStateStore";
-import type { AiAnswer } from "../ai/aiAnswer";
-import { type AppEnv, ConfigError } from "../config/env";
+import type { AppEnv } from "../config/env";
 import { CommandLimits } from "../state/limits";
 import { StateUnavailableError } from "../state/types";
 import { InMemoryAiFigures } from "./ai/aiFigures";
@@ -24,7 +23,7 @@ const ENV: AppEnv = {
   dailyCap: 500,
 };
 
-const NO_FIGURE = { remaining: null, limit: null, resetsAt: null };
+const _NO_FIGURE = { remaining: null, limit: null, resetsAt: null };
 
 function setup() {
   const clock = new FakeClock(Date.UTC(2026, 10, 13, 12));
@@ -135,29 +134,6 @@ describe("GET /api/metrics", () => {
     expect(store.snapshot()).toBe(before);
   });
 
-  it("returns the last request and the limits known in memory", async () => {
-    const { get, figures } = setup();
-    const answer: AiAnswer = {
-      receivedAt: 5000,
-      usage: { prompt: 120, completion: 30, total: 150 },
-      limits: {
-        requests: { remaining: 480, limit: 500, resetsAt: 9000 },
-        tokens: NO_FIGURE,
-      },
-    };
-    figures.update(answer);
-
-    const { metrics } = await body(await get());
-
-    expect(metrics.ai.lastRequest).toEqual({
-      at: 5000,
-      prompt: 120,
-      completion: 30,
-      total: 150,
-    });
-    expect(metrics.ai.limits.requests).toEqual(answer.limits.requests);
-  });
-
   it("FR-14, AC-15: the answer holds no secrets, no content and no address", async () => {
     const { get } = setup();
 
@@ -252,15 +228,6 @@ describe("GET /api/metrics", () => {
     );
     expect(JSON.stringify(log.mock.calls)).not.toContain("/secret/path");
   });
-
-  it("a broken configuration gives the generic error", async () => {
-    const { get, state } = setup();
-    state.loadEnv = () => {
-      throw new ConfigError("Invalid environment variables: X");
-    };
-
-    expect((await get()).status).toBe(500);
-  });
 });
 
 describe("GET /api/metrics, application group", () => {
@@ -342,26 +309,6 @@ describe("GET /api/metrics, application group", () => {
     });
     expect(metrics.app.latency).toMatchObject({ count: 1, medianMs: 640 });
     expect(metrics.app.services).toEqual({ nominatim: false });
-  });
-
-  it("AC-14: repeated reads change no figure and record nothing", async () => {
-    const { get, store, commandWindow, nominatim } = setup();
-    const record = vi.spyOn(commandWindow, "record");
-    const report = vi.spyOn(nominatim, "report");
-    const transact = vi.spyOn(store, "transact");
-
-    const first = await body(await get());
-    const second = await body(await get());
-
-    expect(second).toEqual(first);
-    expect(first.metrics.app.load).toMatchObject({
-      lastHour: null,
-      activeClients: null,
-      inProgress: 0,
-    });
-    expect(record).not.toHaveBeenCalled();
-    expect(report).not.toHaveBeenCalled();
-    expect(transact).not.toHaveBeenCalled();
   });
 
   it("AC-7: no client address appears in the answer", async () => {

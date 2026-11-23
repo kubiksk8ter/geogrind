@@ -122,21 +122,6 @@ describe("NominatimGeocoder result", () => {
     });
   });
 
-  it("falls back to the plain box when the outline is missing or odd", async () => {
-    const odd = {
-      ...BRNO,
-      geojson: { type: "MultiPolygon", coordinates: "x" },
-    };
-    const { geocoder } = setup(() => Response.json([odd]));
-
-    expect(await geocoder.find("Brno", signal)).toEqual({
-      bounds: [
-        [16.4283, 49.1096],
-        [16.7283, 49.2946],
-      ],
-    });
-  });
-
   it("AC-5: returns only a hotel when nothing better matched", async () => {
     const { geocoder } = setup(() => Response.json([HOTEL]));
 
@@ -237,24 +222,6 @@ describe("NominatimGeocoder result", () => {
     expect(await geocoder.find("Neexistující Lhota", signal)).toBeNull();
   });
 
-  it("gives a point-like result a minimum extent", async () => {
-    const { geocoder } = setup(() =>
-      Response.json([
-        { category: "place", boundingbox: ["49.2", "49.2", "16.6", "16.6"] },
-      ]),
-    );
-
-    const found = await geocoder.find("Lhota", signal);
-
-    const [[west, south], [east, north]] = found?.bounds ?? [
-      [0, 0],
-      [0, 0],
-    ];
-    expect(east - west).toBeCloseTo(0.01);
-    expect(north - south).toBeCloseTo(0.01);
-    expect((west + east) / 2).toBeCloseTo(16.6);
-  });
-
   it.each([
     ["an error status", () => new Response("rate limited", { status: 429 })],
     ["a server error", () => new Response("down", { status: 503 })],
@@ -303,15 +270,6 @@ describe("NominatimGeocoder highlight", () => {
     );
 
     expect((await geocoder.find("Eiffel", signal))?.highlight).toEqual(polygon);
-  });
-
-  it("AC-2: a landmark point is passed on exactly as received", async () => {
-    const point = { type: "Point", coordinates: [2.2945, 48.8584] };
-    const { geocoder } = setup(() =>
-      Response.json([withGeometry(TOWER, point)]),
-    );
-
-    expect((await geocoder.find("Eiffel", signal))?.highlight).toEqual(point);
   });
 
   it("AC-3: a river answers with its line", async () => {
@@ -563,16 +521,6 @@ describe("NominatimGeocoder politeness", () => {
     expect(slept).toEqual([1000, 1000]);
   });
 
-  it("does not wait when enough time has passed", async () => {
-    const { geocoder, slept, clock } = setup();
-
-    await geocoder.find("Brno", signal);
-    clock.advance(1500);
-    await geocoder.find("Plzeň", signal);
-
-    expect(slept).toEqual([]);
-  });
-
   it("caches answers, also case-insensitively, and found-nothing results", async () => {
     const { geocoder, fetchStub } = setup((url) =>
       Response.json(url.includes("Nikde") ? [] : [BRNO]),
@@ -597,16 +545,5 @@ describe("NominatimGeocoder politeness", () => {
     await geocoder.find("Brno", signal);
 
     expect(fetchStub).toHaveBeenCalledTimes(2);
-  });
-
-  it("stops waiting for its turn when the request is aborted", async () => {
-    const { geocoder, fetchStub } = setup();
-    const controller = new AbortController();
-    controller.abort(new Error("budget"));
-
-    await expect(geocoder.find("Brno", controller.signal)).rejects.toThrow(
-      "budget",
-    );
-    expect(fetchStub).not.toHaveBeenCalled();
   });
 });

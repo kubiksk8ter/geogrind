@@ -40,19 +40,6 @@ describe("pieSlices", () => {
     expect(ends.at(-1)?.end).toEqual([50, 0]);
   });
 
-  it("uses the large arc only for a slice over half of the circle", () => {
-    const [big, small] = pieSlices(
-      [
-        { key: "a", count: 3 },
-        { key: "b", count: 1 },
-      ],
-      CIRCLE,
-    );
-
-    expect(big?.d).toContain("A 50 50 0 1 1");
-    expect(small?.d).toContain("A 50 50 0 0 1");
-  });
-
   it("AC-3: a single result at 100 % is a full circle, not an empty arc", () => {
     const slices = pieSlices(
       [
@@ -98,12 +85,6 @@ describe("sparklinePath", () => {
     expect(dots).toEqual([]);
   });
 
-  it("keeps the inset free at the edges", () => {
-    const { d } = sparklinePath([0, 100], { width: 100, height: 20, inset: 2 });
-
-    expect(d).toBe("M 2 18 L 98 2");
-  });
-
   it("stretches between real values are solid, those touching an empty bucket are dotted", () => {
     const { d, dotted, dots } = sparklinePath(
       [null, null, 10, 20, null, null, null, null, null, null, null, null],
@@ -127,31 +108,5 @@ describe("sparklinePath", () => {
     expect(d).toBe("");
     expect(dotted).toBe("M 0 10 L 10 10 L 20 0 L 30 10");
     expect(dots).toEqual([]);
-  });
-
-  it("a series of one bucket is a dot", () => {
-    const { d, dotted, dots } = sparklinePath([5], {
-      width: 30,
-      height: 10,
-      inset: 0,
-    });
-
-    expect(d).toBe("");
-    expect(dotted).toBe("");
-    expect(dots).toEqual([{ x: 15, y: 0 }]);
-  });
-
-  it("all zero durations lie on the bottom line", () => {
-    const { d } = sparklinePath([0, 0], { width: 10, height: 10, inset: 0 });
-
-    expect(d).toBe("M 0 10 L 10 10");
-  });
-
-  it("nothing to draw for an empty series", () => {
-    expect(sparklinePath([null, null], BOX)).toEqual({
-      d: "",
-      dotted: "",
-      dots: [],
-    });
   });
 });

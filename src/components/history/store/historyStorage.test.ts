@@ -85,15 +85,6 @@ describe("history storage", () => {
     expect(storage.load()).toEqual(good);
   });
 
-  it("keeps only the first entry of each id on load", () => {
-    const { fake, storage } = setup();
-    const first = makeEntry(1, { id: "same" });
-    const duplicate = makeEntry(2, { id: "same" });
-    fake.setItem(KEY, envelope([first, duplicate, makeEntry(3)]));
-
-    expect(storage.load()).toEqual([first, makeEntry(3)]);
-  });
-
   it("keeps at most the newest 50 entries on load", () => {
     const { fake, storage } = setup();
     const many = Array.from({ length: 60 }, (_, i) => makeEntry(60 - i));

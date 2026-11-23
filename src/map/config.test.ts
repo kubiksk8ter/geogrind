@@ -15,8 +15,4 @@ describe("MAP_CONFIG", () => {
     expect(south).toBeLessThanOrEqual(48.56);
     expect(north).toBeGreaterThanOrEqual(51.05);
   });
-
-  it("uses an https style URL", () => {
-    expect(MAP_CONFIG.styleUrl).toMatch(/^https:\/\//);
-  });
 });

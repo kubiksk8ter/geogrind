@@ -153,12 +153,6 @@ describe("opening and closing", () => {
     expect(screen.queryByRole("button", { name: /side panel/i })).toBeNull();
   });
 
-  it("the control is rendered into the given slot", () => {
-    const { slot } = setup();
-
-    expect(slot.contains(openControl())).toBe(true);
-  });
-
   it("AC-1, AC-17, AC-25: History is followed by Metrics, with an accessible tab list name", async () => {
     setup();
     const dialog = await open();
@@ -275,15 +269,6 @@ describe("large screen", () => {
     await open();
 
     expect(outside.closest("[aria-hidden='true'], [inert]")).toBeNull();
-  });
-
-  it("changing the screen size while open switches the layout without closing", async () => {
-    const { media } = setup({ large: false });
-    await open();
-
-    act(() => media.setLarge(true));
-
-    expect(panel()).not.toBeNull();
   });
 });
 

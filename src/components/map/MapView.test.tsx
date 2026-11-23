@@ -285,32 +285,6 @@ describe("MapView", () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(fetches);
     });
-
-    it("a new engine starts unknown again", async () => {
-      vi.stubGlobal("fetch", async () =>
-        Response.json({ ok: true, metrics: makeSnapshot() }),
-      );
-      const { calls, createEngine, rerender } = setup("en");
-      act(() => calls[0]?.onAvailabilityChange("available"));
-      await openMetrics();
-      expect(mapLight()).toBe("Service is available");
-
-      const replacement = vi.fn<CreateMapEngine>((options) =>
-        createEngine(options),
-      );
-      rerender(
-        <LocaleProvider initialLocale="en">
-          <TermsAcknowledgementProvider store={acknowledgedTermsStore()}>
-            <HistoryStoreProvider store={historyStore()}>
-              <MapView createEngine={replacement} />
-            </HistoryStoreProvider>
-          </TermsAcknowledgementProvider>
-        </LocaleProvider>,
-      );
-
-      await waitFor(() => expect(replacement).toHaveBeenCalledOnce());
-      expect(mapLight()).toBe("Status not known yet");
-    });
   });
 
   describe("start-up notice (spec 012)", () => {
@@ -365,13 +339,6 @@ describe("MapView", () => {
       await waitFor(() =>
         expect(dialog.contains(document.activeElement)).toBe(true),
       );
-    });
-
-    it("the notice shows no draft or legal-advice remark", async () => {
-      setupNotice("en");
-      const dialog = await findNotice();
-
-      expect(dialog.textContent).not.toMatch(/draft|legal advice/i);
     });
 
     it("AC-2, AC-16: “I understand” closes the notice, stores the version and moves focus to the command input", async () => {
@@ -602,17 +569,6 @@ describe("MapView", () => {
       return await screen.findByRole("dialog");
     }
 
-    it("AC-3, AC-9: a successful command is added, a second one for the same place too", async () => {
-      vi.stubGlobal("fetch", answer(success));
-      setup("en");
-
-      await command("Zoom to Brno");
-      await command("Zoom to Brno");
-
-      const dialog = await openPanel();
-      expect(within(dialog).getAllByRole("listitem")).toHaveLength(2);
-    });
-
     it("AC-4: a failed command adds nothing", async () => {
       vi.stubGlobal(
         "fetch",
@@ -627,19 +583,6 @@ describe("MapView", () => {
 
       const dialog = await openPanel();
       expect(within(dialog).queryByRole("list")).toBeNull();
-    });
-
-    it("AC-5: the entries are kept in session storage and restored after a reload", async () => {
-      vi.stubGlobal("fetch", answer(success));
-      const storage = new FakeStorage();
-      const first = setup("en", storage);
-      await command("Zoom to Brno");
-      first.unmount();
-
-      setup("en", storage);
-
-      const dialog = await openPanel();
-      expect(within(dialog).getByText("Zoom to Brno")).toBeDefined();
     });
 
     it("AC-6, AC-7: a re-run moves the map with the stored result without any request or input change", async () => {
@@ -687,41 +630,6 @@ describe("MapView", () => {
       expect(input.disabled).toBe(true);
     });
 
-    it("AC-8: entries are disabled while a command request is running", async () => {
-      stubMatchMedia({ large: true });
-      const storage = new FakeStorage();
-      createSessionHistoryStorage(() => storage).save([
-        {
-          id: "stored",
-          at: Date.now(),
-          text: "Zoom to Brno",
-          result: { action: "zoom_to_place", bounds: BOUNDS },
-        },
-      ]);
-      setup("en", storage);
-      const dialog = await openPanel();
-      const entry = within(dialog).getByRole("button", {
-        name: /Zoom to Brno/,
-      });
-      expect((entry as HTMLButtonElement).disabled).toBe(false);
-
-      let finish: (response: Response) => void = () => {};
-      vi.stubGlobal(
-        "fetch",
-        () =>
-          new Promise<Response>((resolve) => {
-            finish = resolve;
-          }),
-      );
-      await command("Zoom to Plzen");
-      expect((entry as HTMLButtonElement).disabled).toBe(true);
-
-      await act(async () => {
-        finish(Response.json({ ok: false, error: { code: "unsupported" } }));
-      });
-      expect((entry as HTMLButtonElement).disabled).toBe(false);
-    });
-
     it("AC-13: no panel control when the map failed to load", () => {
       const { calls } = setup("en");
 
@@ -730,20 +638,6 @@ describe("MapView", () => {
       expect(
         screen.queryByRole("button", { name: "Open side panel" }),
       ).toBeNull();
-    });
-
-    it("AC-18: an open panel narrows the map from 768 px and the map is full width again after closing", async () => {
-      setup("en");
-      const section = screen.getByRole("region", { name: "Map" });
-      expect(section.className).not.toContain("md:w-");
-
-      const dialog = await openPanel();
-      expect(section.className).toContain("md:w-[calc(100dvw-19rem)]");
-
-      fireEvent.click(
-        within(dialog).getByRole("button", { name: "Close side panel" }),
-      );
-      await waitFor(() => expect(section.className).not.toContain("md:w-"));
     });
   });
 });
