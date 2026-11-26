@@ -78,7 +78,9 @@ self-hosted runner (FR-9, AC-15).
 ### D-4: Credentials
 
 A `deploy` user whose `authorized_keys` entry has `restrict` and the forced command
-`geogrind-deploy`; sudoers allows only `systemctl stop|start geogrind`. Key and host key are
+`geogrind-deploy`; sudoers allows only `systemctl stop|start geogrind` and one extra command,
+`geogrind-env-check`, run as the service user (prints variable names only, never values); the
+deploy needs it to check the env file before the switch. Key and host key are
 `production` environment secrets; no third-party actions. A leaked key can push a build but not
 read the Groq key (`/etc/geogrind/geogrind.env`, root and service group) (NFR-3). Port 22 is
 key-only, no root login, ufw rate limit (NFR-5).
@@ -95,8 +97,9 @@ The host keeps 3 releases and a `previous` link; `geogrind-rollback` flips back 
 health-checks. The state is never touched; a release that changes its shape stays readable by the
 previous one (additive fields) or the release notes say "delete `state.json` before rollback"
 (counters only, NFR-7). journald keeps service stdout (`[command]`, `[metrics]`, `[privacy]`),
-Caddy's runtime log, deploy messages and sshd for 14 days (200 MB cap); no visitor IP is stored
-(FR-12, NFR-6). `/release.json` (`version`, `commit`, `builtAt`) tells which release runs.
+deploy messages and sshd for 14 days (200 MB cap). Caddy's whole log is discarded (global
+`log { output discard }`), so no visitor IP reaches the journal; certificate problems are debugged
+by temporarily enabling it. No visitor IP is stored (FR-12, NFR-6). `/release.json` (`version`, `commit`, `builtAt`) tells which release runs.
 
 ### D-7: Terms host note
 
@@ -215,11 +218,12 @@ retries, journal shows it (NFR-4). Corrupt state -> existing fail-safe (NFR-7).
 5. **T-5: Terms** - host note in `messages/cs.json` and `en.json`, `OPERATOR_CONTACT` (fix its
    comment), bump `TERMS_VERSION`, change the `TermsTab` test from two `[TODO]` markers to none.
    Done when: tests pass, no `[TODO]` and no DuckDNS wording remain. Covers: FR-13, AC-20.
-6. **T-6: Documentation** - README "Production" (prerequisites incl. DNS records and domain expiry
-   reminder, host setup, release, verify, rollback, `apt upgrade`, logs, disk check),
-   `.env.example` hints, minor version bump (1.0.0 is the maintainer's). Done when: the owner can
+6. **T-6: Documentation** - `deploy/README.md` holds the runbook (prerequisites incl. DNS records
+   and domain expiry reminder, host setup, release, verify, rollback, `apt upgrade`, logs, disk
+   check); the main README gets a short "Production" section (release is fully automatic after
+   merge to `main` and green CI) linking to it; `.env.example` hints, minor version bump (1.0.0 is the maintainer's). Done when: the owner can
    follow it alone. Covers: NFR-11, FR-14, AC-24, AC-26.
-7. **T-7 [owner]: Provision once, following the README** - (a) order `geogrind.cz` (consider
+7. **T-7 [owner]: Provision once, following `deploy/README.md`** - (a) order `geogrind.cz` (consider
    automatic renewal) and the VPS; Wedos panel checks (TODO 2);
    (b) set A (AAAA if IPv6, `www` if used) to the VPS addresses and check propagation from outside
    (`dig`/`nslookup`) **before the first deploy**; (c) on the host: updates, swap, Node 26, Caddy,
@@ -250,4 +254,4 @@ build. Other acceptance criteria are manual in T-8.
 - A shared data-centre IP may be rate-limited by Nominatim or Groq (verify step 4 shows it).
 - Redirects behind the proxy must use the public host and https (verify step 1); the developer may
   need `X-Forwarded-*` handling. Unverified: `output: "standalone"` with next-intl and
-  `instrumentation.ts` (T-1). NodeSource and Caddy need a monthly `apt upgrade` (README).
+  `instrumentation.ts` (T-1). NodeSource and Caddy need a monthly `apt upgrade` (`deploy/README.md`).

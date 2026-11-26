@@ -1,0 +1,48 @@
+# /etc/systemd/system/geogrind.service
+# The GeoGrind production server: one Node process on the loopback interface, behind Caddy.
+[Unit]
+Description=GeoGrind (Next.js standalone server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=geogrind
+Group=geogrind
+WorkingDirectory=/srv/geogrind/current
+ExecStart=/usr/bin/node /srv/geogrind/current/server.js
+# Root-owned, 0640 root:geogrind; holds GROQ_API_KEY and the other variables (design 013).
+EnvironmentFile=/etc/geogrind/geogrind.env
+# Only Caddy may reach the app, so it listens on loopback only.
+Environment=NODE_ENV=production HOSTNAME=127.0.0.1 PORT=3000
+Restart=always
+RestartSec=2
+
+# /var/lib/geogrind (STATE_DIR), created by systemd, readable only by the service user.
+StateDirectory=geogrind
+StateDirectoryMode=0700
+UMask=0077
+
+# Hardening: the release is read-only, nothing but the state folder is writable.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

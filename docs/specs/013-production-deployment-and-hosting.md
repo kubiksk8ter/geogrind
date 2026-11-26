@@ -285,8 +285,9 @@ updated and rolled back in a repeatable way.
 - No backup of the state file is needed (NFR-7).
 - The checks and smoke tests in `.github/workflows/ci.yml` are reused as the release gate and
   are not changed by this spec.
-- The deployment documentation goes into the README and the architecture document, updated by
-  the developer and the architect in their roles.
+- The deployment documentation goes into `deploy/README.md` (the runbook), a short Production
+  section in the README and the architecture document, updated by the developer and the
+  architect in their roles.
 
 ## Open questions / risks
 

@@ -1,0 +1,26 @@
+# /etc/caddy/Caddyfile
+# Caddy obtains and renews the Let's Encrypt certificates and redirects http to https on its own.
+# No `log` directive in the site, so there is no access log (spec 013, NFR-6).
+{
+	# Caddy's own log would name client addresses (TLS handshake and proxy errors), so it is
+	# discarded and no visitor IP reaches the journal. To debug certificates, comment this out
+	# for a while: `sudo systemctl reload caddy`, then `journalctl -u caddy`.
+	log {
+		output discard
+	}
+}
+
+geogrind.cz {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000 {
+		# CLIENT_IP_HEADER=x-real-ip: always replaced with the address of the connecting client,
+		# so a value sent by the client never reaches the app.
+		header_up X-Real-IP {remote_host}
+	}
+}
+
+# Only when a `www` DNS record points to this server; without the record Caddy would keep
+# failing to get its certificate. Uncomment, then `sudo systemctl reload caddy`.
+# www.geogrind.cz {
+# 	redir https://geogrind.cz{uri} permanent
+# }
