@@ -169,7 +169,7 @@
             "key": "Klíč je jen v paměti serveru, nejpozději o půlnoci UTC (nejvýše po 24 hodinách) se ničí a při restartu serveru se vytvoří nový. Jde o pseudonymizaci, nikoli anonymizaci: dokud klíč existuje, lze pseudonym přiřadit k téže IP adrese.",
             "records": "Záznam klienta pro omezení počtu příkazů se maže nejpozději 60 sekund po jeho posledním příkazu. Pseudonym je také v paměti přehledu provozu po dobu nejvýše jedné hodiny; po restartu je prázdný.",
             "content": "Text příkazů na serveru neukládáme. Ukládáme jen souhrnné denní počty (volání AI, tokeny, výsledky příkazů), které neobsahují osobní údaje. Logy obsahují jen kód výsledku, dobu zpracování a název chyby.",
-            "host": "Hostitel serveru a případný reverzní proxy server mohou IP adresy zaznamenávat mimo kontrolu aplikace. [TODO]"
+            "host": "Aplikace běží na virtuálním serveru společnosti WEDOS Internet, a.s. v jejím datovém centru v Hluboké nad Vltavou (Česká republika); server ani data na něm uložená se nepřesouvají do zahraničí. Reverzní proxy server před aplikací nevede přístupový log a logy serveru, uchovávané 14 dní, neobsahují IP adresy návštěvníků. WEDOS jako poskytovatel serveru a sítě zaznamenává pro provoz a bezpečnost údaje o spojení včetně IP adres a přístupové logy uchovává nejvýše 6 měsíců."
           }
         },
         "recipients": {

@@ -169,7 +169,7 @@
             "key": "The key exists only in the server's memory. It is destroyed at the latest at midnight UTC (at most after 24 hours), and a new one is created when the server restarts. This is pseudonymisation, not anonymisation: while the key exists, the pseudonym can be matched to the same IP address.",
             "records": "The client record used for the command limits is deleted at the latest 60 seconds after the client's last command. The pseudonym is also kept in the memory of the traffic overview for at most one hour; it is empty after a restart.",
             "content": "We do not store the text of commands on the server. We store only daily totals (AI calls, tokens, command results), which contain no personal data. Logs contain only a result code, the processing time and an error name.",
-            "host": "The server host and any reverse proxy may record IP addresses outside the control of the application. [TODO]"
+            "host": "The application runs on a virtual server of WEDOS Internet, a.s. in its data centre in Hluboká nad Vltavou (Czech Republic); neither the server nor the data stored on it are moved abroad. The reverse proxy in front of the application keeps no access log, and the server logs, kept for 14 days, contain no IP addresses of visitors. As the provider of the server and the network, WEDOS records connection data, including IP addresses, for operation and security, and keeps access logs for at most 6 months."
           }
         },
         "recipients": {

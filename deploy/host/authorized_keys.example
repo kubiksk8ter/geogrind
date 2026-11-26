@@ -1,0 +1,4 @@
+# /home/deploy/.ssh/authorized_keys (0600 deploy:deploy). One line; replace the key with the
+# public half of the GitHub deploy key. `restrict` turns off forwarding, PTY and user rc files;
+# the key can only run the forced command, which accepts `deploy <sha>` and `rollback`.
+restrict,command="/usr/local/bin/geogrind-deploy" ssh-ed25519 AAAA_REPLACE_WITH_THE_DEPLOY_PUBLIC_KEY geogrind-github-deploy

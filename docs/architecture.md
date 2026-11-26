@@ -23,6 +23,12 @@
 - Server state: one JSON file on local disk behind a `StateStore` interface (single instance).
   Client ids in it are keyed hashes (HMAC-SHA-256, key in memory only, rotated at UTC midnight).
 - `server-only` marks server modules so they cannot reach the browser bundle.
+- Production: one Wedos VPS (Ubuntu Server 24.04, 1 vCPU, 1 GB RAM, 10 GB SSD; owner's choice),
+  Node 26 as a systemd service on `127.0.0.1`, Caddy 2 in front (automatic HTTPS, sets
+  `X-Real-IP`, no access log), journald logs, own domain `geogrind.cz` (Wedos, DNS set by the
+  owner, apex canonical); releases are standalone Next
+  builds shipped by GitHub Actions over a restricted SSH key –
+  [design 013](design/013-production-deployment-and-hosting.md).
 
 ## Structure
 
@@ -40,6 +46,9 @@ src/config/      app-wide constants (e.g. APP_NAME)
 src/i18n/        routing, request config, typed messages, client LocaleProvider, helpers
 src/proxy.ts     next-intl locale interceptor (Next 16 "proxy")
 messages/        cs.json, en.json
+deploy/          release packaging, verify script; host/ = systemd unit, Caddyfile, journald,
+                 sudoers, deploy and rollback scripts (templates installed by hand on the host)
+.github/workflows/  ci.yml (checks, smoke), deploy.yml (release to production after CI on main)
 docs/            specs/, design/, architecture.md
 ```
 
@@ -53,6 +62,10 @@ behind interfaces that tests can replace; secrets stay in server-side code.
 | OpenFreeMap | Vector map style and tiles | No stated caps, no SLA | No key; style URL in `src/map` config (browser) |
 | Groq (`openai/gpt-oss-20b`) | Text -> action + place name | 30 RPM, 1K RPD, 8K TPM, 200K TPD (docs, per organisation); no card | `GROQ_API_KEY`, `GROQ_MODEL` (server) |
 | Nominatim (OSM) | Place name -> bounds in CZ | 1 req/s for the app, identifying User-Agent, OSM attribution | `GEOCODER_URL`, `GEOCODER_CONTACT` (server) |
+| Wedos VPS (1 vCPU, 1 GB RAM, 10 GB SSD, Ubuntu 24.04) | Production host | Paid by the owner: about 124 CZK/month incl. VAT (discounted, not guaranteed; a higher renewal price needs a new owner decision) | Owner account, SSH key |
+| Wedos domain `geogrind.cz` and DNS | Public address https://geogrind.cz | Paid by the owner: 193.60 CZK/year incl. VAT (about 16 CZK/month; total with hosting about 139.4 CZK/month; renewal price to be confirmed) | A/AAAA (and `www`) records in the Wedos panel; `APP_ORIGIN=https://geogrind.cz` |
+| Let's Encrypt (via Caddy) | HTTPS certificate, auto-renewing | Free | none |
+| GitHub Actions | CI gate and deployment | Free usage | `production` environment: `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOST`, vars `DEPLOY_HOST`, `PUBLIC_ORIGIN` |
 
 Other server env: `CLIENT_IP_HEADER`, `APP_ORIGIN`, `STATE_DIR`, `DAILY_CAP` (see `.env.example`).
 
@@ -118,5 +131,14 @@ Other server env: `CLIENT_IP_HEADER`, `APP_ORIGIN`, `STATE_DIR`, `DAILY_CAP` (se
   records of other keys and legacy raw ids; an unref'd timer armed at key creation plus a boot
   sweep from `instrumentation.ts` clean up even on an idle server –
   [design 011](design/011-ip-hashing.md)
+- Production on a paid Wedos VPS and own domain `geogrind.cz` chosen by the owner (not a PaaS:
+  free PaaS tiers sleep or have no disk); fits 10 GB disk and 1 GB RAM with a stated budget (3 kept releases, capped journald, 1 GB
+  swap); Caddy overwrites
+  `CLIENT_IP_HEADER`, the app listens on loopback only; stop-then-start releases keep a single
+  instance; `current`/`previous` symlinks give rollback; a later database (e.g. `node:sqlite`) or
+  second process fits the same host – [design 013](design/013-production-deployment-and-hosting.md)
+- Automatic deployment from `main` only after CI succeeded (`workflow_run`), with one SSH key that
+  can only run a forced deploy command; the Groq key exists only on the host –
+  [design 013](design/013-production-deployment-and-hosting.md)
 - Tailwind CSS added at the user's request (supersedes "no Tailwind" in design 001); shared
   class sets live in `src/components/sharedConstants.ts`

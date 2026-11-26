@@ -61,9 +61,9 @@ describe("TermsTab", () => {
     [
       "cs",
       "Podmínky užívání a zásady ochrany osobních údajů",
-      "(verze 2026-11-19)",
+      "(verze 2026-11-25)",
     ],
-    ["en", "Terms of use and privacy notice", "(version 2026-11-19)"],
+    ["en", "Terms of use and privacy notice", "(version 2026-11-25)"],
   ] as const)(
     "AC-11, NFR-5: in %s the text is a headed document with nine numbered sections",
     (locale, title, version) => {
@@ -121,14 +121,42 @@ describe("TermsTab", () => {
     },
   );
 
-  it("the operator contact comes from one constant and the open placeholders stay visible", () => {
-    const { container } = renderTab("en");
+  it.each([
+    ["en", /Operator: the author of the project/],
+    ["cs", /Provozovatel: autor projektu/],
+  ] as const)(
+    "AC-20 (spec 013): the %s text names the operator contact and leaves no placeholder",
+    (locale, operator) => {
+      const { container } = renderTab(locale);
+      const text = container.textContent ?? "";
 
-    expect(
-      screen.getByText(/Operator: the author of the project/).textContent,
-    ).toContain(`contact ${OPERATOR_CONTACT}.`);
-    expect(container.textContent?.match(/\[TODO\]/g)).toHaveLength(2);
-  });
+      expect(OPERATOR_CONTACT).toBe("jakub.holecek31@gmail.com");
+      expect(screen.getByText(operator).textContent).toContain(
+        `${OPERATOR_CONTACT}.`,
+      );
+      expect(text).not.toContain("[TODO]");
+      expect(text).not.toMatch(/duckdns/i);
+    },
+  );
+
+  it.each([
+    ["en", "5. What we process on the server", "Hluboká nad Vltavou"],
+    ["cs", "5. Jaké údaje zpracováváme na serveru", "Hluboké nad Vltavou"],
+  ] as const)(
+    "AC-20 (spec 013): the %s host note names the host, its data centre and the log periods",
+    (locale, section, dataCentre) => {
+      renderTab(locale);
+
+      const host = within(screen.getByRole("region", { name: section }))
+        .getAllByRole("listitem")
+        .at(-1)?.textContent;
+
+      expect(host).toContain("WEDOS");
+      expect(host).toContain(dataCentre);
+      expect(host).toMatch(/14 (days|dní)/);
+      expect(host).toMatch(/6 (months|měsíců)/);
+    },
+  );
 
   it("AC-11: switching the language changes the whole text at once", () => {
     const { container } = renderTab("cs");
@@ -138,7 +166,9 @@ describe("TermsTab", () => {
     expect(
       screen.getByRole("heading", { name: "Terms of use and privacy notice" }),
     ).toBeDefined();
-    expect(container.textContent).not.toMatch(/[ěščřžýáíéůú]/);
+    // The data-centre town is a proper name and keeps its spelling in English.
+    const text = container.textContent?.replace("Hluboká nad Vltavou", "");
+    expect(text).not.toMatch(/[ěščřžýáíéůú]/);
   });
 
   it("AC-17: the authority link points to the Czech data protection authority", () => {

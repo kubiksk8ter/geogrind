@@ -2,6 +2,7 @@
 
 A Next.js map application controlled by natural language.
 Type a zoom command like "Zoom to Prague" or "Přibliž na Brno" and the map moves there.
+Production runs at [https://geogrind.cz](https://geogrind.cz) (see [Production](#production)).
 
 ## Status
 
@@ -54,10 +55,11 @@ Early development. Current features:
       unknown until the next command (hour figures say "since start" during the first hour); the day's
       token total, cap counter and command results are kept in the state file.
   - **Terms:** the terms of use and privacy notice in Czech and English
-    ([spec 012](docs/specs/012-terms-and-privacy-notice.md)). Before going to production, fill in
-    the operator contact (`OPERATOR_CONTACT` in `src/components/terms/termsConstants.ts`) and the
-    server host note (`terms.document.sections.server.items.host` in `messages/*.json`), which
-    are still `[TODO]`; a substantive text change needs a new `TERMS_VERSION`.
+    ([spec 012](docs/specs/012-terms-and-privacy-notice.md)), including the operator contact
+    (`OPERATOR_CONTACT` in `src/components/terms/termsConstants.ts`) and the host note
+    (`terms.document.sections.server.items.host` in `messages/*.json`: Wedos VPS in Hluboká nad
+    Vltavou, what the proxy, the host and the provider log). A substantive text change needs a new
+    `TERMS_VERSION`.
 - Short colour transitions on the input focus border and the CZ/EN selection;
   disabled with the system "reduced motion" setting
 
@@ -93,7 +95,8 @@ the server. For local development it is the only variable you have to set; `GEOC
 
 In production the app must run as one instance with a writable disk (the limits are kept in a
 file in `STATE_DIR`) behind a reverse proxy that sets `CLIENT_IP_HEADER`; without that the
-per-IP limits cannot be trusted.
+per-IP limits cannot be trusted. The production setup that does this is described in
+[deploy/README.md](deploy/README.md).
 
 ```bash
 npm install
@@ -123,8 +126,9 @@ results), a possible AI pause and one short-lived record per client for the limi
   traffic, and the server start (`src/instrumentation.ts`) clears records left by the previous run.
 - At the key change, rate limit and cooldown start empty for everyone; the daily cap is not
   affected. The metrics may count a client twice in "active clients" for up to an hour after it.
-- While the key exists, the hash is pseudonymised (not anonymous) data. The hosting provider and a
-  reverse proxy may still see and log IP addresses; that is outside the app.
+- While the key exists, the hash is pseudonymised (not anonymous) data. In production Caddy keeps
+  no access log and the journal (14 days) holds no visitor IP; the provider (Wedos) logs
+  connection data incl. IP addresses for at most 6 months, which is outside the app.
 - The visitor-facing description of this is the Terms tab
   ([spec 012](docs/specs/012-terms-and-privacy-notice.md)); keep both in step when it changes.
 
@@ -146,6 +150,10 @@ src/config/      app-wide constants
 src/i18n/        routing, request config, typed messages, client locale provider
 src/proxy.ts     locale redirect (next-intl)
 messages/        cs.json, en.json
+deploy/          production runbook (README.md), release packaging, post-deploy verification;
+                 host/ = systemd unit, Caddyfile, journald, sudoers and env templates,
+                 deploy/rollback/env-check scripts, dry run
+.github/workflows/  ci.yml (checks, smoke), deploy.yml (release to production)
 docs/            specs, designs, architecture
 ```
 
@@ -160,12 +168,25 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on pull requests and pushes to 
   time `npx playwright install chromium`). On failure the report is uploaded as an artifact.
 
 To protect a branch, require the `checks` and `smoke` status checks in the GitHub branch protection rules.
+After CI passed for a push to `main`, `.github/workflows/deploy.yml` releases it to production (see [Production](#production)).
+
+## Production
+
+Production runs at [https://geogrind.cz](https://geogrind.cz) on one Wedos VPS (Node 26 as a systemd
+service behind Caddy). Releasing is fully automatic: merge `develop` into `main`; once CI is green
+for that push, `.github/workflows/deploy.yml` builds a standalone release, uploads it over SSH,
+switches it on, health-checks it and runs `deploy/verify.sh` against the public address. An
+unhealthy release is removed and the previous one started again automatically. The running release
+is shown at [/release.json](https://geogrind.cz/release.json).
+
+Host setup, rollback, logs and maintenance: [deploy/README.md](deploy/README.md).
 
 ## Documentation
 
 - [Architecture](docs/architecture.md)
 - [Specs](docs/specs/)
 - [Designs](docs/design/)
+- [Production runbook](deploy/README.md)
 
 ## AI agents
 

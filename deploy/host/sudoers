@@ -1,0 +1,5 @@
+# /etc/sudoers.d/geogrind-deploy (0440 root:root; check with `sudo visudo -cf <file>`)
+# The deploy user may only stop and start the service and run the environment check as the
+# service user (it prints variable names only). It can never read the environment file itself.
+deploy ALL=(root) NOPASSWD: /usr/bin/systemctl stop geogrind, /usr/bin/systemctl start geogrind
+deploy ALL=(geogrind) NOPASSWD: /usr/local/bin/geogrind-env-check
