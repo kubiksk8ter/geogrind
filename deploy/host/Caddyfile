@@ -11,6 +11,9 @@
 }
 
 geogrind.cz {
+	# HSTS: browsers go straight to https for `max-age` seconds after a visit. Kept at one day,
+	# because a browser cannot be told to forget it before it visits again or the time runs out.
+	header Strict-Transport-Security "max-age=86400"
 	encode zstd gzip
 	reverse_proxy 127.0.0.1:3000 {
 		# CLIENT_IP_HEADER=x-real-ip: always replaced with the address of the connecting client,
@@ -19,8 +22,9 @@ geogrind.cz {
 	}
 }
 
-# Only when a `www` DNS record points to this server; without the record Caddy would keep
-# failing to get its certificate. Uncomment, then `sudo systemctl reload caddy`.
-# www.geogrind.cz {
-# 	redir https://geogrind.cz{uri} permanent
-# }
+# `www` only redirects to the canonical apex address. It needs the `www` DNS record; without it
+# Caddy would keep failing to get the certificate.
+www.geogrind.cz {
+	header Strict-Transport-Security "max-age=86400"
+	redir https://geogrind.cz{uri} permanent
+}

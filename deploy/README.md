@@ -1,10 +1,10 @@
 # GeoGrind – production runbook
 
 One Wedos VPS (Ubuntu Server 24.04, 1 vCPU, 1 GB RAM, 10 GB SSD) runs the app as the systemd
-service `geogrind` (Node 26, `127.0.0.1:3000`) behind Caddy (HTTPS for `geogrind.cz`, sets
-`X-Real-IP`, no access log). Releases are standalone Next builds made by GitHub Actions and
-streamed over SSH to a `deploy` user that can only run the deploy command. Why it is built this
-way: [design 013](../docs/design/013-production-deployment-and-hosting.md).
+service `geogrind` (Node 26, `127.0.0.1:3000`) behind Caddy (HTTPS for `geogrind.cz` with HSTS,
+`www` redirect, sets `X-Real-IP`, no access log). Releases are standalone Next builds made by
+GitHub Actions and streamed over SSH to a `deploy` user that can only run the deploy command. Why
+it is built this way: [design 013](../docs/design/013-production-deployment-and-hosting.md).
 
 All commands below use paths relative to the repository root.
 
@@ -28,8 +28,9 @@ All commands below use paths relative to the repository root.
   A higher renewal price needs a new decision.
 - DNS records in the Wedos panel, set **before the first deploy** (otherwise Caddy cannot get the
   certificate): `A geogrind.cz -> <VPS IPv4>`, `AAAA geogrind.cz -> <VPS IPv6>` if the VPS has one,
-  and the same for `www.geogrind.cz` only if `www` is wanted. Check from outside with
-  `nslookup geogrind.cz` or `dig +short geogrind.cz A`.
+  and `CNAME www.geogrind.cz -> geogrind.cz.` (the Caddyfile redirects `www` to the apex). Apply
+  the changes in the panel. Check from outside with `nslookup geogrind.cz` and
+  `nslookup www.geogrind.cz`.
 
 ## Host setup (once)
 
@@ -70,7 +71,7 @@ and `cd ~/geogrind`).
    install -m 0755 deploy/host/geogrind-rollback.sh /usr/local/bin/geogrind-rollback
    install -m 0755 deploy/host/geogrind-env-check.sh /usr/local/bin/geogrind-env-check
    install -m 0644 deploy/host/geogrind.service /etc/systemd/system/geogrind.service
-   install -m 0644 deploy/host/Caddyfile /etc/caddy/Caddyfile   # uncomment www if used
+   install -m 0644 deploy/host/Caddyfile /etc/caddy/Caddyfile
    install -D -m 0644 deploy/host/journald.conf /etc/systemd/journald.conf.d/geogrind.conf
    visudo -cf deploy/host/sudoers && install -m 0440 deploy/host/sudoers /etc/sudoers.d/geogrind-deploy
    systemctl daemon-reload && systemctl enable geogrind
