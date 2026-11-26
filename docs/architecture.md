@@ -1,0 +1,144 @@
+# GeoGrind – Architecture
+
+## Stack
+
+- Language: TypeScript 6.0 (strict) – TS 7 not yet reliable with `next build`.
+- Framework: Next.js 16 (App Router) with React 19 – UI, server code, dev and build.
+- i18n: next-intl 4 – App Router native, typed messages, locale routing (`/cs`, `/en`, default `cs`).
+- Tests: Vitest 5 + jsdom + Testing Library.
+- Lint/format: Biome 2 – fast native tooling.
+- Styling: Tailwind CSS 4 (via `@tailwindcss/postcss`) – utility classes in components;
+  `globals.css` imports Tailwind and MapLibre CSS and caps the width of the expanded attribution.
+- UI components: Base UI (`@base-ui/react`) – unstyled, accessible, tree-shakable, MIT; used for
+  all interactive controls (input, language switch, future side panel tabs/switches/meter).
+- Runtime: Node 26 (`.nvmrc`; Vitest 5 needs 22.12+).
+- Map: MapLibre GL JS 6 – vector rendering, camera/layer API; client-only, behind `MapEngine`.
+- Map tiles/style: OpenFreeMap (liberty) – free, no key, no stated caps.
+- Validation: Valibot 1 – tiny, tree-shakable, used at every boundary (client and server).
+- AI: Groq `openai/gpt-oss-20b` via plain `fetch` from a Route Handler – strict JSON schema
+  output on the free tier; key only on the server.
+- Geocoding: Nominatim (OSM public instance) via `fetch`, worldwide (no country restriction).
+- Client state: Zustand 5 (vanilla store + React hook) – tiny, testable outside React; holds the
+  command history, mirrored to session storage (validated on load, quota-aware).
+- Server state: one JSON file on local disk behind a `StateStore` interface (single instance).
+  Client ids in it are keyed hashes (HMAC-SHA-256, key in memory only, rotated at UTC midnight).
+- `server-only` marks server modules so they cannot reach the browser bundle.
+- Production: one Wedos VPS (Ubuntu Server 24.04, 1 vCPU, 1 GB RAM, 10 GB SSD; owner's choice),
+  Node 26 as a systemd service on `127.0.0.1`, Caddy 2 in front (automatic HTTPS, sets
+  `X-Real-IP`, no access log), journald logs, own domain `geogrind.cz` (Wedos, DNS set by the
+  owner, apex canonical); releases are standalone Next
+  builds shipped by GitHub Actions over a restricted SSH key –
+  [design 013](design/013-production-deployment-and-hosting.md).
+
+## Structure
+
+```
+src/app/         routes, layouts, global styles ([locale] segment)
+src/components/  React components, one folder per feature (map, language-switch, command-input,
+                 history = store, storage and History tab, side-panel = tabbed panel) with their hooks and tests
+src/map/         MapEngine interface, MapLibre implementation, map config
+src/app/api/     Route Handlers for the command and metrics endpoints (wiring only)
+src/server/      server-only code: command pipeline, ai, geocoding, state, metrics, config,
+                 privacy (client-id keyring, state purge, key-expiry sweeper)
+src/instrumentation.ts  boot hook (Node runtime): cleans client data left by a previous run
+src/shared/      contracts shared by browser and server (action registry, schemas, text rules, time formatters)
+src/config/      app-wide constants (e.g. APP_NAME)
+src/i18n/        routing, request config, typed messages, client LocaleProvider, helpers
+src/proxy.ts     next-intl locale interceptor (Next 16 "proxy")
+messages/        cs.json, en.json
+deploy/          release packaging, verify script; host/ = systemd unit, Caddyfile, journald,
+                 sudoers, deploy and rollback scripts (templates installed by hand on the host)
+.github/workflows/  ci.yml (checks, smoke), deploy.yml (release to production after CI on main)
+docs/            specs/, design/, architecture.md
+```
+
+Conventions: logic lives outside React components where practical; external services go
+behind interfaces that tests can replace; secrets stay in server-side code.
+
+## External services
+
+| Service | Purpose | Free-tier limits | Key / config |
+|---|---|---|---|
+| OpenFreeMap | Vector map style and tiles | No stated caps, no SLA | No key; style URL in `src/map` config (browser) |
+| Groq (`openai/gpt-oss-20b`) | Text -> action + place name | 30 RPM, 1K RPD, 8K TPM, 200K TPD (docs, per organisation); no card | `GROQ_API_KEY`, `GROQ_MODEL` (server) |
+| Nominatim (OSM) | Place name -> bounds in CZ | 1 req/s for the app, identifying User-Agent, OSM attribution | `GEOCODER_URL`, `GEOCODER_CONTACT` (server) |
+| Wedos VPS (1 vCPU, 1 GB RAM, 10 GB SSD, Ubuntu 24.04) | Production host | Paid by the owner: about 124 CZK/month incl. VAT (discounted, not guaranteed; a higher renewal price needs a new owner decision) | Owner account, SSH key |
+| Wedos domain `geogrind.cz` and DNS | Public address https://geogrind.cz | Paid by the owner: 193.60 CZK/year incl. VAT (about 16 CZK/month; total with hosting about 139.4 CZK/month; renewal price to be confirmed) | A/AAAA (and `www`) records in the Wedos panel; `APP_ORIGIN=https://geogrind.cz` |
+| Let's Encrypt (via Caddy) | HTTPS certificate, auto-renewing | Free | none |
+| GitHub Actions | CI gate and deployment | Free usage | `production` environment: `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOST`, vars `DEPLOY_HOST`, `PUBLIC_ORIGIN` |
+
+Other server env: `CLIENT_IP_HEADER`, `APP_ORIGIN`, `STATE_DIR`, `DAILY_CAP` (see `.env.example`).
+
+## Key decisions
+
+- Always-prefixed locale URLs (`/cs`, `/en`), `/` redirects by cookie / `Accept-Language`
+  (fallback cs); product name "GeoGrind" is a constant, not a message –
+  [design 001](design/001-app-skeleton-intro-screen.md)
+- TypeScript 6 pinned until Next.js supports TS 7 – [design 001](design/001-app-skeleton-intro-screen.md)
+- Server runtime required (no static export) – [design 001](design/001-app-skeleton-intro-screen.md)
+- MapLibre GL JS + OpenFreeMap (both user-approved); provider is one style-URL config value, so
+  it can be swapped (e.g. Mapy.com, self-hosted tiles) – [design 002](design/002-full-screen-map.md)
+- Map code is client-only and hidden behind `MapEngine`; future map features extend that
+  interface – [design 002](design/002-full-screen-map.md)
+- Intro screen replaced by the map; "GeoGrind" `<h1>` is visually hidden –
+  [design 002](design/002-full-screen-map.md)
+- Base UI chosen as the UI component library; no chart library until the side panel spec –
+  [design 003](design/003-user-input-and-language-switch.md)
+- Locale is client state; language switch uses `history.replaceState` (no navigation, so the
+  map is never reloaded) and a client `LocaleProvider` with both catalogues –
+  [design 003](design/003-user-input-and-language-switch.md)
+- Language switch is portaled into a MapLibre control slot exposed by `MapEngine`
+  (`controlsSlot`), stacked below the zoom buttons with options of the same size (29 px);
+  command input is a React overlay in `MapView` at the bottom edge (safe-area aware) –
+  [design 003](design/003-user-input-and-language-switch.md)
+- Map attribution is an explicit `AttributionControl` at top-left (built-in disabled), width
+  capped in `globals.css` – [design 003](design/003-user-input-and-language-switch.md)
+- `NEXT_LOCALE` cookie is written with the Cookie Store API (`localeCookie` returns a
+  `CookieInit`), because Biome forbids `document.cookie` –
+  [design 003](design/003-user-input-and-language-switch.md)
+- Motion is plain CSS transitions (Tailwind classes, `motion-reduce:transition-none` via the
+  shared `TRANSITION_CLASS_NAME`), no animation library; applied to the input focus border and
+  the language switch selection only –
+  [design 004](design/004-motion-transitions.md)
+- AI zoom command: `POST /api/command` pipeline (guard, IP, limits, Groq, Nominatim); closed
+  action registry in `src/shared/actions.ts`; server returns result codes, never texts –
+  [design 005](design/005-ai-implementation.md)
+- Client IP only from an operator-named trusted header (`CLIENT_IP_HEADER`), because Next fills
+  `x-forwarded-for` only when absent (forgeable); needs a reverse proxy –
+  [design 005](design/005-ai-implementation.md)
+- Cooldown, rate limit and daily cap in a lock-protected, atomically written JSON file
+  (`.data/`, git-ignored); corrupt state fails safe; hosting needs a persistent disk –
+  [design 005](design/005-ai-implementation.md)
+- Map moves by `MapEngine.moveTo` (`fitBounds`; reduced motion = jump); server sends bounds –
+  [design 005](design/005-ai-implementation.md)
+- Side panel with command history: Zustand store, session-storage persistence with per-entry
+  validation, Base UI Dialog + Tabs (full screen below 768 px, beside a narrowed map from
+  768 px), re-run through the same `moveMap` without server calls; no server change –
+  [design 008](design/008-sidebar-history.md)
+- Metrics tab (AI): `GroqClient` reports every answer to an observer (return type unchanged);
+  day's tokens persisted in the state file next to the cap counter, last request and limit
+  figures volatile in memory; `GET /api/metrics` (same-origin, read-only, lock-free
+  `StateStore.read`) polled by the browser while the tab is visible; bars are Base UI `Meter`,
+  no chart library; payload grouped by source (`ai`) for phase 2 –
+  [design 009](design/009-sidebar-metrics-ai.md)
+- Metrics tab (Application): one measurement per command from the command handler; hour window
+  in a bounded in-memory ring buffer, today's result counts in the state file; Nominatim status
+  from the geocoder's HTTP attempts; map status computed in the browser from tile events
+  (React context); sibling group `app`; hand-written SVG charts –
+  [design 010](design/010-sidebar-metrics-app.md)
+- Client IPs are hashed (keyed HMAC, `keyId~digest`) in the command handler before anything is
+  stored; the key lives in memory only and ends at UTC midnight; a `StateStore` decorator purges
+  records of other keys and legacy raw ids; an unref'd timer armed at key creation plus a boot
+  sweep from `instrumentation.ts` clean up even on an idle server –
+  [design 011](design/011-ip-hashing.md)
+- Production on a paid Wedos VPS and own domain `geogrind.cz` chosen by the owner (not a PaaS:
+  free PaaS tiers sleep or have no disk); fits 10 GB disk and 1 GB RAM with a stated budget (3 kept releases, capped journald, 1 GB
+  swap); Caddy overwrites
+  `CLIENT_IP_HEADER`, the app listens on loopback only; stop-then-start releases keep a single
+  instance; `current`/`previous` symlinks give rollback; a later database (e.g. `node:sqlite`) or
+  second process fits the same host – [design 013](design/013-production-deployment-and-hosting.md)
+- Automatic deployment from `main` only after CI succeeded (`workflow_run`), with one SSH key that
+  can only run a forced deploy command; the Groq key exists only on the host –
+  [design 013](design/013-production-deployment-and-hosting.md)
+- Tailwind CSS added at the user's request (supersedes "no Tailwind" in design 001); shared
+  class sets live in `src/components/sharedConstants.ts`

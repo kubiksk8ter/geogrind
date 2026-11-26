@@ -1,0 +1,199 @@
+{
+  "map": {
+    "label": "Mapa",
+    "loadError": "Mapu se nepodařilo načíst. Zkuste stránku načíst znovu."
+  },
+  "language": {
+    "group": "Jazyk",
+    "cs": "Čeština",
+    "en": "Angličtina"
+  },
+  "input": {
+    "label": "Příkaz pro mapu",
+    "placeholders": {
+      "zoomToPrague": "Přibliž na Prahu",
+      "showHighTatras": "Zobraz Vysoké Tatry",
+      "showFirstAvenue": "Ukaž 1st Avenue v New Yorku",
+      "france": "Francie",
+      "moscow": "Moskva",
+      "zoomToTokyo": "Přibliž na Tokio",
+      "showGrandCanyon": "Ukaž Grand Canyon",
+      "mountEverest": "Mount Everest",
+      "zoomToColosseum": "Přibliž na Koloseum"
+    }
+  },
+  "command": {
+    "loading": "Zpracovávám příkaz…",
+    "invalidRequest": "Tento příkaz nelze odeslat. Zkontrolujte jeho text.",
+    "unsupported": "Podporuji jen přiblížení na místo na mapě, například „Přibliž na Brno“.",
+    "notFound": "Toto místo se nepodařilo najít.",
+    "tooManyRequests": "Příliš mnoho příkazů. Zkuste to znovu za {seconds, plural, one {# sekundu} few {# sekundy} many {# sekundy} other {# sekund}}.",
+    "aiResting": "Umělá inteligence teď odpočívá. Zkuste to později.",
+    "aiRestingUntil": "Umělá inteligence teď odpočívá. Zkuste to znovu po {time}.",
+    "error": "Příkaz se nepodařilo zpracovat. Zkuste to prosím později.",
+    "countdown": "{seconds} s",
+    "pausedStart": "Mapa se přesunula. Zadávání je pozastaveno na {seconds, plural, one {# sekundu} few {# sekundy} many {# sekundy} other {# sekund}}.",
+    "resumed": "Můžete zadat další příkaz."
+  },
+  "panel": {
+    "open": "Otevřít boční panel",
+    "title": "Boční panel",
+    "close": "Zavřít boční panel",
+    "tabsLabel": "Sekce panelu",
+    "tabs": {
+      "history": "Historie",
+      "metrics": "Metriky",
+      "terms": "Podmínky"
+    },
+    "history": {
+      "listLabel": "Historie příkazů",
+      "empty": "Zatím žádné příkazy. Úspěšné příkazy se zobrazí zde."
+    },
+    "metrics": {
+      "loading": "Načítám údaje…",
+      "loadFailed": "Údaje se nepodařilo načíst. Zkouším to znovu.",
+      "outdated": "Údaje se nepodařilo aktualizovat a mohou být neaktuální. Zkouším to znovu.",
+      "empty": "Údaje se zobrazí po prvním příkazu.",
+      "noData": "bez dat",
+      "ai": {
+        "title": "AI",
+        "model": {
+          "line": "<label>Model:</label> {model}"
+        },
+        "cap": {
+          "title": "AI požadavky",
+          "value": "{used} / {cap}",
+          "ariaValueText": "využito {used} z {cap} požadavků",
+          "resets": "Obnovení za {time}"
+        },
+        "tokensToday": {
+          "title": "Spotřeba tokenů dnes (všichni uživatelé)"
+        },
+        "lastRequest": {
+          "title": "Poslední požadavek (tokeny)",
+          "prompt": "Vstup",
+          "completion": "Odpověď",
+          "total": "Celkem"
+        },
+        "limits": {
+          "requests": "Požadavky za den (Groq)",
+          "tokens": "Tokeny za minutu",
+          "value": "{remaining} / {limit}",
+          "ariaValueText": "zbývá {remaining} z {limit}",
+          "remainingOnly": "zbývá {remaining}",
+          "resets": "Obnoví se za {time}",
+          "resetUnknown": "Čas obnovení: neznámý",
+          "renewed": "Obnoveno. Údaj je neaktuální do dalšího příkazu."
+        }
+      },
+      "app": {
+        "title": "Aplikace",
+        "results": {
+          "title": "Příkazy dnes",
+          "chartLabel": "Výsledky dnešních příkazů: {list}",
+          "item": "{name}: {count} ({percent})",
+          "names": {
+            "success": "Úspěšné",
+            "unsupported": "Nepodporované",
+            "not_found": "Místo nenalezeno",
+            "wait": "Příliš brzy (pauza)",
+            "too_many_requests": "Příliš mnoho příkazů",
+            "ai_resting": "AI odpočívá",
+            "error": "Chyba"
+          }
+        },
+        "latency": {
+          "title": "Doba zpracování (poslední hodina)",
+          "titleSinceStart": "Doba zpracování (od spuštění)",
+          "axisStart": "−60 min",
+          "axisEnd": "teď",
+          "median": "Medián",
+          "p95": "95. percentil",
+          "chartLabel": "Doba zpracování po {bucket} min za posledních {minutes} min: medián {median}, 95. percentil {p95}, {count, plural, one {# příkaz} few {# příkazy} many {# příkazu} other {# příkazů}}."
+        },
+        "load": {
+          "title": "Zátěž",
+          "lastMinute": "Příkazy za poslední minutu",
+          "lastHour": "Příkazy za poslední hodinu",
+          "lastHourSinceStart": "Příkazy od spuštění",
+          "activeClients": "Aktivní klienti (poslední hodina)",
+          "activeClientsSinceStart": "Aktivní klienti (od spuštění)",
+          "inProgress": "Právě zpracovávané příkazy"
+        },
+        "services": {
+          "title": "Stav služeb",
+          "map": "Mapa",
+          "nominatim": "Nominatim",
+          "available": "Služba je dostupná",
+          "unavailable": "Služba není dostupná",
+          "unknown": "Stav zatím není známý"
+        }
+      }
+    }
+  },
+  "terms": {
+    "notice": {
+      "title": "Vítejte v {appName}",
+      "points": {
+        "sensitiveData": "Do příkazů prosím nepište citlivé ani osobní údaje. Text příkazu zpracovává služba umělé inteligence a názvy míst mapová vyhledávací služba.",
+        "aiErrors": "Umělá inteligence se občas splete, proto berte výsledky na mapě jako orientační.",
+        "ipAddress": "Pro ochranu před přetížením a zneužitím dočasně zpracováváme vaši IP adresu, a to jen ve formě pseudonymu s klíčem, který se denně ruší."
+      },
+      "openTerms": "Podmínky a ochrana osobních údajů",
+      "confirm": "Rozumím"
+    },
+    "document": {
+      "title": "Podmínky užívání a zásady ochrany osobních údajů",
+      "version": "(verze {version})",
+      "sections": {
+        "about": {
+          "title": "O službě",
+          "text": "{appName} je bezplatná aplikace. Provozovatel: autor projektu, kontakt {contact}. Služba je poskytována „tak, jak je“, bez záruky dostupnosti, přesnosti ani vhodnosti pro konkrétní účel. Může být kdykoli omezena, změněna nebo ukončena."
+        },
+        "rules": {
+          "title": "Pravidla používání",
+          "text": "Aplikaci používejte přiměřeně. Počet příkazů je omezen (za minutu, mezi dvěma příkazy a za den pro všechny uživatele dohromady). Nepoužívejte automatizované hromadné dotazy a nepokoušejte se omezení obcházet. Provozovatel může přístup omezit."
+        },
+        "sensitiveData": {
+          "title": "Nezadávejte citlivé údaje",
+          "text": "Do příkazu nepište osobní, zdravotní ani jiné citlivé údaje a nic, co nemá být předáno třetím stranám. Text se odesílá externím službám (viz bod 6)."
+        },
+        "ai": {
+          "title": "Umělá inteligence není spolehlivá",
+          "text": "Příkazy vyhodnocuje model umělé inteligence. Může je pochopit špatně nebo odpovědět nepřesně. Místo na mapě a jeho obrys vycházejí z dat OpenStreetMap a mohou být neúplné nebo nesprávné. Nespoléhejte se na ně při rozhodnutích, která mají vliv na zdraví, bezpečí nebo majetek."
+        },
+        "server": {
+          "title": "Jaké údaje zpracováváme na serveru",
+          "items": {
+            "ipAddress": "IP adresa: z ní se hned po příchodu požadavku vytvoří pseudonym (hash s tajným klíčem). Surová IP adresa se neukládá ani nezapisuje do logů. Zpracování probíhá na základě oprávněného zájmu (ochrana služby před přetížením a zneužitím funkcí umělé inteligence).",
+            "key": "Klíč je jen v paměti serveru, nejpozději o půlnoci UTC (nejvýše po 24 hodinách) se ničí a při restartu serveru se vytvoří nový. Jde o pseudonymizaci, nikoli anonymizaci: dokud klíč existuje, lze pseudonym přiřadit k téže IP adrese.",
+            "records": "Záznam klienta pro omezení počtu příkazů se maže nejpozději 60 sekund po jeho posledním příkazu. Pseudonym je také v paměti přehledu provozu po dobu nejvýše jedné hodiny; po restartu je prázdný.",
+            "content": "Text příkazů na serveru neukládáme. Ukládáme jen souhrnné denní počty (volání AI, tokeny, výsledky příkazů), které neobsahují osobní údaje. Logy obsahují jen kód výsledku, dobu zpracování a název chyby.",
+            "host": "Aplikace běží na virtuálním serveru společnosti WEDOS Internet, a.s. v jejím datovém centru v Hluboké nad Vltavou (Česká republika); server ani data na něm uložená se nepřesouvají do zahraničí. Reverzní proxy server před aplikací nevede přístupový log a logy serveru, uchovávané 14 dní, neobsahují IP adresy návštěvníků. WEDOS jako poskytovatel serveru a sítě zaznamenává pro provoz a bezpečnost údaje o spojení včetně IP adres a přístupové logy uchovává nejvýše 6 měsíců."
+          }
+        },
+        "recipients": {
+          "title": "Kam se údaje odesílají",
+          "items": {
+            "ai": "Text příkazu a jazyk rozhraní: poskytovateli umělé inteligence Groq (USA), který příkaz vyhodnotí. Předávání údajů do USA je ošetřeno standardními smluvními doložkami (SCC) v rámci podmínek poskytovatele.",
+            "geocoder": "Název místa: veřejné vyhledávací službě Nominatim (OpenStreetMap). Posílá se s identifikací provozovatele, nikoli s vaší IP adresou ani vaším pseudonymem.",
+            "map": "Mapový styl a dlaždice stahuje váš prohlížeč přímo ze služby OpenFreeMap. Ta proto vidí vaši IP adresu a běžné údaje o požadavku podle vlastních zásad.",
+            "tracking": "Nepoužíváme analytiku, reklamu ani sledovací nástroje."
+          }
+        },
+        "browser": {
+          "title": "Údaje ve vašem prohlížeči",
+          "text": "Používáme pouze technicky nezbytné údaje ve vašem prohlížeči. Historie příkazů (sessionStorage) se smaže se zavřením karty. Konec pauzy mezi příkazy a potvrzení těchto podmínek s číslem verze (localStorage) zůstávají, dokud je nesmažete. Volba jazyka je v cookie, která platí do konce relace prohlížeče. Nic z toho neslouží ke sledování a potvrzení se na server neodesílá."
+        },
+        "rights": {
+          "title": "Vaše práva",
+          "text": "Máte právo na přístup, výmaz, omezení zpracování a námitku proti zpracování a právo podat stížnost u Úřadu pro ochranu osobních údajů (<authority>www.uoou.cz</authority>). Po zničení klíče nelze pseudonym k vám přiřadit, a údaj proto už nelze vyhledat. Uplatnění práv: kontakt výše."
+        },
+        "changes": {
+          "title": "Změny",
+          "text": "Podmínky se mohou změnit. Při změně textu se upozornění zobrazí znovu."
+        }
+      }
+    }
+  }
+}

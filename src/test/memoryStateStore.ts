@@ -1,0 +1,26 @@
+import {
+  EMPTY_STATE,
+  type StateData,
+  type StateStore,
+} from "@/server/state/types";
+
+/** In-memory store for tests. */
+export class MemoryStateStore implements StateStore {
+  constructor(private state: StateData = EMPTY_STATE) {}
+
+  async transact<T>(
+    fn: (state: StateData) => { next: StateData; result: T },
+  ): Promise<T> {
+    const { next, result } = fn(this.state);
+    this.state = next;
+    return result;
+  }
+
+  async read(): Promise<StateData> {
+    return this.state;
+  }
+
+  snapshot(): StateData {
+    return this.state;
+  }
+}

@@ -1,0 +1,68 @@
+name: Deploy
+
+# Releases main to production after CI passed for it (design 013). GitHub runs `workflow_run`
+# only from the copy of this file on the default branch (main).
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # Manual run on main: a deliberate bypass of the CI gate (it does not wait for or check CI),
+  # meant for redeploying main, e.g. after a rollback. Use it only for a commit that passed CI.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time; a running one is never cancelled.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      COMMIT: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.COMMIT }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - name: Build the release
+        run: bash deploy/package-release.sh "$COMMIT"
+        env:
+          # Placeholder as in ci.yml; the real key exists only on the host.
+          GROQ_API_KEY: ci-placeholder
+      - name: Upload and switch on the release
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOST: ${{ secrets.DEPLOY_KNOWN_HOST }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOST" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes "deploy@$DEPLOY_HOST" deploy "$COMMIT" < release.tgz
+      - name: Remove the deploy key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+      - name: Verify the public address
+        run: bash deploy/verify.sh "$PUBLIC_ORIGIN" "$COMMIT"
+        env:
+          PUBLIC_ORIGIN: ${{ vars.PUBLIC_ORIGIN }}
