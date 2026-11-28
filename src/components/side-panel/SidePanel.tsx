@@ -4,6 +4,7 @@ import { Drawer } from "@base-ui/react/drawer";
 import { Tabs } from "@base-ui/react/tabs";
 import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
+import { CloseIcon, MenuIcon } from "../icons/controlIcons";
 import {
   LARGE_SCREEN_QUERY,
   MAP_CONTROL_CLASS_NAME,
@@ -12,6 +13,7 @@ import {
   SIDE_PANEL_WIDTH_CLASS_NAME,
   TRANSITION_CLASS_NAME,
 } from "../sharedConstants";
+import { PanelFooter } from "./PanelFooter";
 import { PANEL_TABS, panelTabId } from "./panelTabs";
 import type { PanelTabContentProps, PanelTabId } from "./panelTypes";
 import { useMediaQuery } from "./useMediaQuery";
@@ -64,17 +66,7 @@ export function SidePanel({
             // enlarges its touch target to 44 px.
             className={`relative mt-2.5 grid size-7.25 cursor-pointer place-items-center bg-white! text-neutral-900 transition-[background-color,box-shadow] duration-300 hover:bg-neutral-100! ${MAP_CONTROL_CLASS_NAME} ${MAP_CONTROL_FOCUS_CLASS_NAME} ${TRANSITION_CLASS_NAME} after:absolute after:-inset-2 after:content-['']`}
           >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="size-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            >
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <MenuIcon className="size-4" />
           </Drawer.Trigger>,
           controlSlot,
         )}
@@ -93,6 +85,7 @@ export function SidePanel({
                 if (!large) onOpenChange(false);
               }}
             />
+            <PanelFooter />
           </Drawer.Popup>
         </Drawer.Viewport>
       </Drawer.Portal>
@@ -127,8 +120,11 @@ function PanelTabs({
             <Tabs.Tab
               key={tab.id}
               value={tab.id}
-              className={`min-h-11 min-w-0 flex-1 basis-0 cursor-pointer px-3 text-sm font-semibold text-neutral-900 data-active:bg-neutral-900 data-active:text-white transition-[background-color,color,box-shadow] duration-300 ${MAP_CONTROL_FOCUS_INSET_CLASS_NAME} ${TRANSITION_CLASS_NAME}`}
+              // Icon and label on one line in both languages from 320 px and in the 19rem panel:
+              // 12 px text (the spec's floor) and tight padding, never a wrap or truncation.
+              className={`flex min-h-11 min-w-0 flex-1 basis-0 cursor-pointer items-center justify-center gap-1 px-1 text-xs font-semibold whitespace-nowrap text-neutral-900 data-active:bg-neutral-900 data-active:text-white transition-[background-color,color,box-shadow] duration-300 ${MAP_CONTROL_FOCUS_INSET_CLASS_NAME} ${TRANSITION_CLASS_NAME}`}
             >
+              <tab.Icon className="size-4 shrink-0" />
               {t(`tabs.${tab.id}`)}
             </Tabs.Tab>
           ))}
@@ -137,17 +133,7 @@ function PanelTabs({
           aria-label={t("close")}
           className={`grid size-11 cursor-pointer place-items-center text-neutral-900 transition-shadow duration-300 ${MAP_CONTROL_FOCUS_INSET_CLASS_NAME} ${TRANSITION_CLASS_NAME}`}
         >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            className="size-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
+          <CloseIcon className="size-5" />
         </Drawer.Close>
       </div>
       {PANEL_TABS.map((tab) => (

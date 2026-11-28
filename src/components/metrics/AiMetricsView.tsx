@@ -2,9 +2,14 @@ import { useTranslations } from "next-intl";
 import type { Locale } from "@/i18n/routing";
 import type { AiMetrics, LimitFigure } from "@/shared/metricsContract";
 import { formatClock, formatCountdown } from "@/shared/timeFormatters";
+import { SparklesIcon } from "../icons/metricsIcons";
 import { formatCount } from "./formatNumbers";
 import { limitView, UNKNOWN_LIMIT } from "./limitView";
-import { MetricsSection } from "./MetricsSection";
+import {
+  GROUP_HEADING_CLASS_NAME,
+  GROUP_ICON_CLASS_NAME,
+  MetricsSection,
+} from "./MetricsSection";
 import { MeterBar } from "./visuals/MeterBar";
 
 export interface AiMetricsViewProps {
@@ -21,7 +26,8 @@ export function AiMetricsView({ ai, now, locale }: AiMetricsViewProps) {
   return (
     <div className="flex flex-col gap-3 p-4 pt-3 text-sm">
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-base font-semibold text-neutral-900">
+        <h2 className={GROUP_HEADING_CLASS_NAME}>
+          <SparklesIcon className={GROUP_ICON_CLASS_NAME} />
           {t("ai.title")}
         </h2>
         <p className="min-w-0 break-all text-right text-[11px] text-neutral-700">

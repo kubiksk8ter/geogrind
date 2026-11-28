@@ -639,3 +639,27 @@ describe("application group", () => {
     expect(fetchStub).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("spec 014: group icons", () => {
+  it.each([
+    ["en", "Application", "AI"],
+    ["cs", "Aplikace", "AI"],
+  ] as const)(
+    "AC-20: in %s the Application and AI headings start with a hidden icon and keep their names",
+    async (locale, application, ai) => {
+      stubFetch(makeSnapshot());
+      await setup(locale);
+
+      for (const name of [application, ai]) {
+        const heading = screen.getByRole("heading", { level: 2, name });
+        const [icon, label] = [...heading.childNodes];
+
+        expect(icon instanceof SVGSVGElement).toBe(true);
+        expect(
+          icon instanceof Element && icon.getAttribute("aria-hidden"),
+        ).toBe("true");
+        expect(label?.textContent).toBe(name);
+      }
+    },
+  );
+});

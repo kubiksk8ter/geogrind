@@ -1,10 +1,11 @@
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { OPERATOR_CONTACT } from "@/config";
 import { LocaleProvider, useLocaleSwitch } from "@/i18n/LocaleProvider";
 import type { Locale } from "@/i18n/routing";
 import { TermsTab } from "./TermsTab";
-import { OPERATOR_CONTACT, TERMS_VERSION } from "./termsConstants";
+import { TERMS_VERSION } from "./termsConstants";
 
 beforeEach(() => {
   vi.stubGlobal("cookieStore", { set: () => Promise.resolve() });
@@ -61,9 +62,9 @@ describe("TermsTab", () => {
     [
       "cs",
       "Podmínky užívání a zásady ochrany osobních údajů",
-      "(verze 2026-11-25)",
+      "(verze 2026-11-28)",
     ],
-    ["en", "Terms of use and privacy notice", "(version 2026-11-25)"],
+    ["en", "Terms of use and privacy notice", "(version 2026-11-28)"],
   ] as const)(
     "AC-11, NFR-5: in %s the text is a headed document with nine numbered sections",
     (locale, title, version) => {
@@ -122,22 +123,47 @@ describe("TermsTab", () => {
   );
 
   it.each([
-    ["en", /Operator: the author of the project/],
-    ["cs", /Provozovatel: autor projektu/],
+    [
+      "en",
+      "Operator: the author of the project. You can contact the operator by e-mail using the envelope icon link at the bottom of this panel.",
+      "To exercise your rights, send an e-mail to jakub.holecek31@gmail.com or use the envelope icon link at the bottom of this panel.",
+    ],
+    [
+      "cs",
+      "Provozovatel: autor projektu. Kontaktovat ho můžete e-mailem přes odkaz s ikonou obálky v dolní části tohoto panelu.",
+      "Svá práva můžete uplatnit e-mailem na adrese jakub.holecek31@gmail.com nebo přes odkaz s ikonou obálky v dolní části tohoto panelu.",
+    ],
   ] as const)(
-    "AC-20 (spec 013): the %s text names the operator contact and leaves no placeholder",
-    (locale, operator) => {
+    "spec 014 AC-21, AC-24: the %s operator contact is in 'Your rights' only, as plain text",
+    (locale, aboutSentence, rightsSentence) => {
       const { container } = renderTab(locale);
       const text = container.textContent ?? "";
+      const about = screen.getByRole("region", {
+        name: SECTION_TITLES[locale][0],
+      });
+      const rights = screen.getByRole("region", {
+        name: SECTION_TITLES[locale][7],
+      });
 
       expect(OPERATOR_CONTACT).toBe("jakub.holecek31@gmail.com");
-      expect(screen.getByText(operator).textContent).toContain(
-        `${OPERATOR_CONTACT}.`,
-      );
+      expect(about.textContent).toContain(aboutSentence);
+      expect(about.textContent).not.toContain(OPERATOR_CONTACT);
+      expect(rights.textContent?.endsWith(rightsSentence)).toBe(true);
+      // The address appears once in the whole text, and as plain text, not as a further link.
+      expect(text.split(OPERATOR_CONTACT)).toHaveLength(2);
+      expect(
+        within(rights)
+          .getAllByRole("link")
+          .map((link) => link.textContent),
+      ).toEqual(["www.uoou.cz"]);
       expect(text).not.toContain("[TODO]");
       expect(text).not.toMatch(/duckdns/i);
     },
   );
+
+  it("spec 014 FR-16: the terms version is the date of the contact change", () => {
+    expect(TERMS_VERSION).toBe("2026-11-28");
+  });
 
   it.each([
     ["en", "5. What we process on the server", "Hluboká nad Vltavou"],

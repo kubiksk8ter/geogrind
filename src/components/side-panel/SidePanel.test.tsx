@@ -17,6 +17,7 @@ import { HistoryStoreProvider } from "../history/store/HistoryStoreProvider";
 import type { HistoryEntry } from "../history/store/historyEntrySchema";
 import { createSessionHistoryStorage } from "../history/store/historyStorage";
 import { createHistoryStore } from "../history/store/historyStore";
+import { LanguageSwitch } from "../language-switch/LanguageSwitch";
 import { DEFAULT_PANEL_TAB } from "./panelTabs";
 import { SidePanel, type SidePanelProps } from "./SidePanel";
 
@@ -54,12 +55,14 @@ function setup({
   entries = [],
   withSlot = true,
   showResult = vi.fn(),
+  languageSwitch = false,
 }: {
   locale?: Locale;
   large?: boolean;
   entries?: HistoryEntry[];
   withSlot?: boolean;
   showResult?: SidePanelProps["showResult"];
+  languageSwitch?: boolean;
 } = {}) {
   const media = stubMatchMedia({ large });
   const storage = new FakeStorage();
@@ -76,6 +79,7 @@ function setup({
   render(
     <LocaleProvider initialLocale={locale}>
       <HistoryStoreProvider store={store}>
+        {languageSwitch && <LanguageSwitch />}
         <Harness controlSlot={withSlot ? slot : null} showResult={showResult} />
       </HistoryStoreProvider>
     </LocaleProvider>,
@@ -363,5 +367,146 @@ describe("history tab", () => {
     expect(openControl().getAttribute("aria-label")).toBe(
       "Otevřít boční panel",
     );
+  });
+});
+
+describe("spec 014: tab icons and footer links", () => {
+  const GITHUB = "https://github.com/kubiksk8ter/geogrind";
+  const LINKEDIN = "https://www.linkedin.com/in/jakub-holecek86/";
+  const EMAIL = "jakub.holecek31@gmail.com";
+
+  const footerLinks = (dialog: HTMLElement) => {
+    const footer = dialog.querySelector("footer");
+    if (!(footer instanceof HTMLElement)) throw new Error("no footer");
+    return within(footer).getAllByRole("link");
+  };
+
+  it("AC-10, AC-16: every tab shows a hidden icon followed by its label", async () => {
+    setup();
+    const dialog = await open();
+
+    for (const tab of within(dialog).getAllByRole("tab")) {
+      const [icon, label] = [...tab.childNodes];
+      expect(icon instanceof SVGSVGElement).toBe(true);
+      expect(icon instanceof Element && icon.getAttribute("aria-hidden")).toBe(
+        "true",
+      );
+      expect(label?.nodeType).toBe(Node.TEXT_NODE);
+    }
+    expect(
+      within(dialog)
+        .getAllByRole("tab")
+        .map((tab) => tab.textContent),
+    ).toEqual(["History", "Metrics", "Terms"]);
+  });
+
+  it("AC-13: the footer holds the GitHub, LinkedIn and e-mail links in this order, as icons only", async () => {
+    setup();
+    const dialog = await open();
+
+    const links = footerLinks(dialog);
+
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      GITHUB,
+      LINKEDIN,
+      `mailto:${EMAIL}`,
+    ]);
+    for (const link of links) {
+      expect(link.textContent).toBe("");
+      expect(link.querySelector("svg")?.getAttribute("aria-hidden")).toBe(
+        "true",
+      );
+    }
+  });
+
+  it("AC-14, AC-19: every footer link opens in a new tab without referrer or opener", async () => {
+    setup();
+    const dialog = await open();
+
+    for (const link of footerLinks(dialog)) {
+      expect(link.getAttribute("target")).toBe("_blank");
+      expect(link.getAttribute("rel")?.split(" ").sort()).toEqual([
+        "noopener",
+        "noreferrer",
+      ]);
+    }
+  });
+
+  it.each([
+    [
+      "cs",
+      "Zdrojový kód na GitHubu",
+      "Autor na LinkedInu",
+      "Napsat provozovateli: jakub.holecek31@gmail.com",
+    ],
+    [
+      "en",
+      "Source code on GitHub",
+      "Author on LinkedIn",
+      "E-mail the operator: jakub.holecek31@gmail.com",
+    ],
+  ] as const)(
+    "AC-15, FR-15: tooltip and accessible name are the same text in %s",
+    async (locale, github, linkedin, email) => {
+      setup({ locale });
+      const dialog = await open();
+
+      const links = footerLinks(dialog);
+
+      expect(links.map((link) => link.getAttribute("title"))).toEqual([
+        github,
+        linkedin,
+        email,
+      ]);
+      expect(within(dialog).getByRole("link", { name: email })).toBeDefined();
+      expect(within(dialog).getByRole("link", { name: github })).toBeDefined();
+      expect(
+        within(dialog).getByRole("link", { name: linkedin }),
+      ).toBeDefined();
+    },
+  );
+
+  it("AC-15: the link texts change at once with the language switch", async () => {
+    setup({ locale: "en", large: true, languageSwitch: true });
+    const dialog = await open();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Czech" }));
+
+    const github = await within(dialog).findByRole("link", {
+      name: "Zdrojový kód na GitHubu",
+    });
+    expect(github.getAttribute("title")).toBe("Zdrojový kód na GitHubu");
+    expect(
+      within(dialog)
+        .getByRole("link", {
+          name: "Napsat provozovateli: jakub.holecek31@gmail.com",
+        })
+        .getAttribute("title"),
+    ).toBe("Napsat provozovateli: jakub.holecek31@gmail.com");
+  });
+
+  it("FR-9: the footer stays outside the scrolling tab content on every tab", async () => {
+    vi.stubGlobal("fetch", () => new Promise(() => {}));
+    setup();
+    const dialog = await open();
+
+    for (const name of ["Metrics", "Terms", "History"]) {
+      fireEvent.click(within(dialog).getByRole("tab", { name }));
+      const panel = within(dialog).getByRole("tabpanel");
+      const footer = dialog.querySelector("footer");
+
+      expect(footer).not.toBeNull();
+      expect(panel.contains(footer)).toBe(false);
+      expect(footerLinks(dialog)).toHaveLength(3);
+    }
+  });
+
+  it("AC-17: the panel loads nothing from GitHub, LinkedIn or another host", async () => {
+    setup();
+    const dialog = await open();
+
+    expect(
+      dialog.querySelectorAll("img, image, iframe, script, use"),
+    ).toHaveLength(0);
   });
 });
