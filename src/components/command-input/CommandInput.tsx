@@ -6,6 +6,7 @@ import { useLocaleSwitch } from "@/i18n/LocaleProvider";
 import type { MapTarget } from "@/map";
 import type { CommandResult } from "@/shared/actions";
 import { MAX_COMMAND_LENGTH } from "@/shared/text";
+import { SpinnerIcon } from "../icons/controlIcons";
 import {
   MAP_CONTROL_CLASS_NAME,
   MAP_CONTROL_FOCUS_CLASS_NAME,
@@ -104,27 +105,7 @@ export function CommandInput({
             aria-hidden="true"
             className="pointer-events-none absolute inset-y-0 right-3 flex items-center gap-2 text-sm text-neutral-700 tabular-nums"
           >
-            <svg
-              aria-hidden="true"
-              className="size-4 animate-spin motion-reduce:animate-none"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <circle
-                cx="12"
-                cy="12"
-                r="9"
-                stroke="currentColor"
-                strokeOpacity="0.25"
-                strokeWidth="3"
-              />
-              <path
-                d="M21 12a9 9 0 0 0-9-9"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-            </svg>
+            <SpinnerIcon className="size-4 animate-spin motion-reduce:animate-none" />
             {tCommand("countdown", { seconds: pausedSeconds })}
           </span>
         )}

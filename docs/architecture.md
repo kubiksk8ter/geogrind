@@ -35,7 +35,8 @@
 ```
 src/app/         routes, layouts, global styles ([locale] segment)
 src/components/  React components, one folder per feature (map, language-switch, command-input,
-                 history = store, storage and History tab, side-panel = tabbed panel) with their hooks and tests
+                 history = store, storage and History tab, side-panel = tabbed panel, icons = shared SVG
+                 icons) with their hooks and tests
 src/map/         MapEngine interface, MapLibre implementation, map config
 src/app/api/     Route Handlers for the command and metrics endpoints (wiring only)
 src/server/      server-only code: command pipeline, ai, geocoding, state, metrics, config,

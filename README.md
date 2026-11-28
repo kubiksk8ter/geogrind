@@ -32,15 +32,18 @@ Early development. Current features:
   the Terms tab; "I understand", Escape and the link close it. The acknowledgement is kept in
   local storage (`geogrind.termsAcknowledgement`) with the terms version only, never sent to the
   server; a new version in `src/components/terms/termsConstants.ts` shows the notice again.
-- Side panel (control below the language switch) with three tabs, "History", "Metrics" and "Terms". Full screen on
-  phones (closes after picking a history entry), beside a narrowed map from 768 px width.
+- Side panel (control below the language switch) with three tabs, "History", "Metrics" and "Terms", each with an
+  icon in front of its label. Full screen on phones (closes after picking a history entry), beside a narrowed map
+  from 768 px width. Its footer has icon links to the [source code on GitHub](https://github.com/kubiksk8ter/geogrind)
+  and to the author's LinkedIn profile and an envelope link that addresses an e-mail to the operator in the
+  visitor's mail application. All three open in a new tab (addresses in `src/config/index.ts`).
   - **History:** your successful commands (up to 50 entries). Clicking an entry moves the map there again and
     shows the highlight without any request to the AI or the geocoder. The history stays in session storage
     of the browser tab, so it survives a reload and ends with the tab; it is never sent to the server.
   - **Metrics:** two groups of figures, refreshed every 10 s while the tab is visible and shared by all
     visitors; only numbers are stored, never command text, place names or IP addresses. They are served by
     a read-only, same-origin `GET /api/metrics` and come from normal commands (no extra calls to Groq or
-    Nominatim).
+    Nominatim). Both group headings (Application, AI) have an icon.
     - _AI:_ how much of the free Groq quota the app uses: the app's own daily cap of AI calls with the time
       to the next UTC day, the tokens of the last AI request (input, output, total), the remaining requests
       (per day) and tokens (per minute) with live countdowns to their renewal, the day's token total (UTC
@@ -55,13 +58,18 @@ Early development. Current features:
       unknown until the next command (hour figures say "since start" during the first hour); the day's
       token total, cap counter and command results are kept in the state file.
   - **Terms:** the terms of use and privacy notice in Czech and English
-    ([spec 012](docs/specs/012-terms-and-privacy-notice.md)), including the operator contact
-    (`OPERATOR_CONTACT` in `src/components/terms/termsConstants.ts`) and the host note
+    ([spec 012](docs/specs/012-terms-and-privacy-notice.md)), including the operator contact in "Your
+    rights" (`OPERATOR_CONTACT` in `src/config/index.ts`, also used by the footer e-mail link) and the host note
     (`terms.document.sections.server.items.host` in `messages/*.json`: Wedos VPS in Hluboká nad
     Vltavou, what the proxy, the host and the provider log). A substantive text change needs a new
-    `TERMS_VERSION`.
+    `TERMS_VERSION` (in `src/components/terms/termsConstants.ts`).
 - Short colour transitions on the input focus border and the CZ/EN selection;
   disabled with the system "reduced motion" setting
+- App icon: a white "G" on a dark rounded square, with a web manifest (`/manifest.webmanifest`, opens as a
+  standalone "GeoGrind" window, no offline mode). All icons are static files: `src/app/icon.svg` (the master
+  artwork and favicon), `src/app/favicon.ico` (32 px), `src/app/apple-icon.png` (180 px, opaque) and
+  `public/icons/` (192 and 512 px, maskable 512 px, full-bleed). When the artwork changes, regenerate the
+  raster copies by hand.
 
 Tech stack: TypeScript (strict), Next.js (App Router, with a Route Handler as the server part),
 next-intl, MapLibre GL JS, Tailwind CSS, Base UI, Zustand, Valibot, Groq (AI), Nominatim (geocoding),
@@ -135,20 +143,21 @@ results), a possible AI pause and one short-lived record per client for the limi
 ## Project structure
 
 ```
-src/app/         routes, layouts, global styles ([locale] segment)
+src/app/         routes, layouts, global styles ([locale] segment), app icons, web manifest
 src/app/api/     Route Handlers of the command and metrics endpoints (wiring only)
 src/components/  React components, one folder per feature (map, language-switch, command-input,
                  history = store, storage and History tab, metrics = Metrics tab, side-panel = tabbed panel,
-                 terms = start-up notice, acknowledgement store and Terms tab)
+                 terms = start-up notice, acknowledgement store and Terms tab, icons = shared SVG icons)
 src/map/         map engine interface, MapLibre implementation (incl. highlight layers, tile availability), map config
 src/server/      server-only code: command pipeline, AI client, geocoder, limits state, metrics, env config,
                  privacy (client-id hashing key, state purge, key-expiry cleanup)
 src/instrumentation.ts  server start hook: clears client records left by the previous run
 e2e/             smoke tests (Playwright): map, start-up notice, command input, side panel, language switch
 src/shared/      contracts shared by browser and server (action list, schemas, text rules, metrics contract)
-src/config/      app-wide constants
+src/config/      app-wide constants (app name, author links, operator contact)
 src/i18n/        routing, request config, typed messages, client locale provider
 src/proxy.ts     locale redirect (next-intl)
+public/          static files: installation icons of the web manifest
 messages/        cs.json, en.json
 deploy/          production runbook (README.md), release packaging, post-deploy verification;
                  host/ = systemd unit, Caddyfile, journald, sudoers and env templates,

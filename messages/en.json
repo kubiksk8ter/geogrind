@@ -45,6 +45,11 @@
       "metrics": "Metrics",
       "terms": "Terms"
     },
+    "links": {
+      "github": "Source code on GitHub",
+      "linkedin": "Author on LinkedIn",
+      "email": "E-mail the operator: {address}"
+    },
     "history": {
       "listLabel": "Command history",
       "empty": "No commands yet. Successful commands will appear here."
@@ -148,7 +153,7 @@
       "sections": {
         "about": {
           "title": "About the service",
-          "text": "{appName} is a free application. Operator: the author of the project, contact {contact}. The service is provided “as is”, with no guarantee of availability, accuracy or fitness for any purpose. It may be limited, changed or ended at any time."
+          "text": "{appName} is a free application. Operator: the author of the project. You can contact the operator by e-mail using the envelope icon link at the bottom of this panel. The service is provided “as is”, with no guarantee of availability, accuracy or fitness for any purpose. It may be limited, changed or ended at any time."
         },
         "rules": {
           "title": "Rules of use",
@@ -187,7 +192,7 @@
         },
         "rights": {
           "title": "Your rights",
-          "text": "You have the right of access, erasure, restriction and objection, and the right to complain to the Czech Office for Personal Data Protection (<authority>www.uoou.cz</authority>). After the key has been destroyed the pseudonym can no longer be matched to you, so the data can no longer be found. To exercise your rights, use the contact above."
+          "text": "You have the right of access, erasure, restriction and objection, and the right to complain to the Czech Office for Personal Data Protection (<authority>www.uoou.cz</authority>). After the key has been destroyed the pseudonym can no longer be matched to you, so the data can no longer be found. To exercise your rights, send an e-mail to {contact} or use the envelope icon link at the bottom of this panel."
         },
         "changes": {
           "title": "Changes",

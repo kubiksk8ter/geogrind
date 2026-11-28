@@ -2,13 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import { type ReactNode, useId } from "react";
-import { APP_NAME } from "@/config";
+import { APP_NAME, OPERATOR_CONTACT } from "@/config";
 import type messages from "../../../messages/cs.json";
 import {
   MAP_CONTROL_FOCUS_CLASS_NAME,
   TRANSITION_CLASS_NAME,
 } from "../sharedConstants";
-import { OPERATOR_CONTACT, TERMS_VERSION } from "./termsConstants";
+import { TERMS_VERSION } from "./termsConstants";
 
 type SectionKey = keyof typeof messages.terms.document.sections;
 
@@ -32,14 +32,7 @@ export function TermsTab() {
   const sections: readonly { key: SectionKey; body: ReactNode }[] = [
     {
       key: "about",
-      body: (
-        <p>
-          {t("sections.about.text", {
-            appName: APP_NAME,
-            contact: OPERATOR_CONTACT,
-          })}
-        </p>
-      ),
+      body: <p>{t("sections.about.text", { appName: APP_NAME })}</p>,
     },
     { key: "rules", body: <p>{t("sections.rules.text")}</p> },
     { key: "sensitiveData", body: <p>{t("sections.sensitiveData.text")}</p> },
@@ -68,8 +61,10 @@ export function TermsTab() {
     {
       key: "rights",
       body: (
-        <p>
+        // The e-mail address is one long word; it may break rather than overflow the panel.
+        <p className="wrap-break-word">
           {t.rich("sections.rights.text", {
+            contact: OPERATOR_CONTACT,
             authority: (chunks) => (
               <a
                 href={AUTHORITY_URL}

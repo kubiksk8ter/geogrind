@@ -3,6 +3,7 @@ import type { Locale } from "@/i18n/routing";
 import type { MapAvailability } from "@/map";
 import type { AppMetrics } from "@/shared/metricsContract";
 import { formatDuration } from "@/shared/timeFormatters";
+import { AppWindowIcon } from "../icons/metricsIcons";
 import {
   isPartialWindow,
   type ServiceState,
@@ -10,7 +11,11 @@ import {
   windowSpanMinutes,
 } from "./appMetricsViewHelper";
 import { formatCount } from "./formatNumbers";
-import { MetricsSection } from "./MetricsSection";
+import {
+  GROUP_HEADING_CLASS_NAME,
+  GROUP_ICON_CLASS_NAME,
+  MetricsSection,
+} from "./MetricsSection";
 import { LatencySparkline } from "./visuals/LatencySparkline";
 import { ResultsPie } from "./visuals/ResultsPie";
 import { ServiceLight } from "./visuals/ServiceLight";
@@ -37,7 +42,10 @@ export function AppMetricsView({
 
   return (
     <div className="flex flex-col gap-3 p-4 pt-3 pb-0 text-sm">
-      <h2 className="text-base font-semibold text-neutral-900">{t("title")}</h2>
+      <h2 className={GROUP_HEADING_CLASS_NAME}>
+        <AppWindowIcon className={GROUP_ICON_CLASS_NAME} />
+        {t("title")}
+      </h2>
       <MetricsSection title={t("services.title")}>
         <Services map={map} nominatim={serviceState(app.services.nominatim)} />
       </MetricsSection>
